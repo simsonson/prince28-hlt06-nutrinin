@@ -1,0 +1,35 @@
+[
+  {
+    "id": "001",
+    "food_code": "",
+    "food_name": "",
+    "food_group": "",
+    "energy_kcal": "",
+    "protein_g": "",
+    "iron_mg": "",
+    "fibre_g": "",
+    "per_100g": ""
+  },
+  {
+    "id": "002",
+    "food_code": "",
+    "food_name": "",
+    "food_group": "",
+    "energy_kcal": "",
+    "protein_g": "",
+    "iron_mg": "",
+    "fibre_g": "",
+    "per_100g": ""
+  },
+  {
+    "id": "003",
+    "food_code": "",
+    "food_name": "",
+    "food_group": "",
+    "energy_kcal": "",
+    "protein_g": "",
+    "iron_mg": "",
+    "fibre_g": "",
+    "per_100g": ""
+  }
+]
