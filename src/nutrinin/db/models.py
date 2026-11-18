@@ -38,6 +38,7 @@ class Document(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     external_id: Mapped[str] = mapped_column(String(64), unique=True)  # your record "id"
     title: Mapped[str] = mapped_column(Text)
+    food_code: Mapped[str | None] = mapped_column(String(64), index=True)
     source_url: Mapped[str | None] = mapped_column(Text)
     licence: Mapped[str | None] = mapped_column(String(200))
     doc_type: Mapped[str] = mapped_column(String(50), server_default="record")

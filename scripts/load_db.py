@@ -2,22 +2,24 @@
 
 Safe to run again and again: new records are inserted, changed ones updated,
 unchanged ones skipped (we compare a sha256 fingerprint of each record).
-Run:  uv run python scripts/load_db.py
+Stale database records are reported; pass --prune to delete them.
+Run:  uv run python scripts/load_db.py [--prune]
 """
 
+import argparse
 import asyncio
 import hashlib
 import json
 from datetime import date
 
-from sqlalchemy import select, update
+from sqlalchemy import delete, select, update
 
 from nutrinin.config import get_settings
 from nutrinin.db.models import Document
 from nutrinin.db.session import make_engine, make_sessionmaker
 
 TITLE_FIELD = "food_code"  # the record field that best names a record
-KNOWN = {"id", "title", "source_url", "licence", "doc_type", "published_on"}
+KNOWN = {"id", "title", "food_code", "source_url", "licence", "doc_type", "published_on"}
 
 
 def fingerprint(record: dict) -> str:
@@ -30,6 +32,7 @@ def to_row(record: dict) -> dict:
     return {
         "external_id": str(record["id"]),
         "title": str(record.get("title") or record.get(TITLE_FIELD) or record["id"]),
+        "food_code": record.get("food_code"),
         "source_url": record.get("source_url"),
         "licence": record.get("licence"),
         "doc_type": record.get("doc_type") or "record",
@@ -39,15 +42,25 @@ def to_row(record: dict) -> dict:
     }
 
 
-async def main() -> None:
+async def main(*, prune: bool = False) -> None:
     settings = get_settings()
     records = json.loads(settings.data_file.read_text(encoding="utf-8"))
     engine = make_engine(settings)
     session_factory = make_sessionmaker(engine)
     inserted = updated = unchanged = 0
+    deleted = 0
     async with session_factory() as session, session.begin():  # one transaction
         rows = await session.execute(select(Document.external_id, Document.sha256))
         existing = dict(rows.all())
+        incoming_ids = {str(record["id"]) for record in records}
+        stale_ids = sorted(existing.keys() - incoming_ids)
+        for external_id in stale_ids:
+            print(f"stale id={external_id}")
+        if prune and stale_ids:
+            result = await session.execute(
+                delete(Document).where(Document.external_id.in_(stale_ids))
+            )
+            deleted = result.rowcount or 0
         for record in records:
             row = to_row(record)
             old = existing.get(row["external_id"])
@@ -62,8 +75,16 @@ async def main() -> None:
             else:
                 unchanged += 1
     await engine.dispose()
-    print(f"records={len(records)} inserted={inserted} updated={updated} unchanged={unchanged}")
+    print(
+        f"records={len(records)} inserted={inserted} updated={updated} "
+        f"unchanged={unchanged} deleted={deleted}"
+    )
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--prune", action="store_true", help="delete database records absent from the JSON file"
+    )
+    args = parser.parse_args()
+    asyncio.run(main(prune=args.prune))

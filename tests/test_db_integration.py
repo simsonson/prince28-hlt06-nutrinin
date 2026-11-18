@@ -41,8 +41,19 @@ def db_client():
         yield c
 
 
-def test_ready_with_real_database(db_client):
-    assert db_client.get("/ready").json()["checks"]["database"] is True
+def test_ready_reports_real_record_count(db_client):
+    response = db_client.get("/ready")
+    assert response.status_code == 503
+    assert response.json()["checks"]["database"] is True
+    assert response.json()["records_count"] == 2
+    assert response.json()["status"] == "not_ready"
+
+
+def test_stats_with_real_database(db_client):
+    assert db_client.get("/v1/stats").json() == {
+        "records_count": 2,
+        "by_doc_type": {"record": 2},
+    }
 
 
 def test_filter_uses_jsonb_containment(db_client):

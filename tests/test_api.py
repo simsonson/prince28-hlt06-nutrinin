@@ -15,6 +15,20 @@ def test_ready_when_database_up(client):
     r = client.get("/ready")
     assert r.status_code == 200
     assert r.json()["checks"]["database"] is True
+    assert r.json()["records_count"] == 20
+    assert r.json()["status"] == "ready"
+
+
+def test_ready_is_503_when_too_few_records(client):
+    from nutrinin.api.deps import get_repo
+
+    repo = client.app.dependency_overrides[get_repo]()
+    repo.rows = repo.rows[:-1]
+    client.app.dependency_overrides[get_repo] = lambda: repo
+    r = client.get("/ready")
+    assert r.status_code == 503
+    assert r.json()["records_count"] == 19
+    assert r.json()["checks"]["records_loaded"] is False
 
 
 def test_ready_is_503_when_database_down(client, db_state):
@@ -25,7 +39,7 @@ def test_ready_is_503_when_database_down(client, db_state):
 
 def test_list_documents_paginates(client):
     body = client.get("/v1/documents", params={"limit": 2}).json()
-    assert body["total"] == 3
+    assert body["total"] == 20
     assert len(body["items"]) == 2
 
 
@@ -38,6 +52,45 @@ def test_metadata_filter(client):
     r = client.get("/v1/documents", params={"kind": "circular"})
     assert r.json()["total"] == 2
     assert r.json()["filters"] == {"kind": "circular"}
+
+
+def test_food_code_filter(client):
+    r = client.get("/v1/documents", params={"food_code": "H001"})
+    assert r.json()["total"] == 1
+    assert r.json()["items"][0]["food_code"] == "H001"
+
+
+def test_list_documents_sorts_by_known_column(client):
+    body = client.get("/v1/documents", params={"sort": "title", "limit": 3}).json()
+    assert [item["id"] for item in body["items"]] == ["001", "002", "004"]
+
+
+def test_list_documents_rejects_unknown_sort_column(client):
+    response = client.get("/v1/documents", params={"sort": "metadata"})
+    assert response.status_code == 400
+
+
+def test_document_stats(client):
+    r = client.get("/v1/stats")
+    assert r.status_code == 200
+    assert r.json() == {
+        "records_count": 20,
+        "by_doc_type": {"guideline": 1, "circular": 2, "record": 17},
+    }
+
+
+def test_record_response_schema_is_exposed(client):
+    schema = client.get("/openapi.json").json()
+    record = schema["components"]["schemas"]["Record"]["properties"]
+    expected_fields = {
+        "food_code",
+        "food_name",
+        "energy_kcal",
+        "protein_g",
+        "iron_mg",
+        "fibre_g",
+    }
+    assert expected_fields <= set(record)
 
 
 def test_invalid_filter_name_is_400(client):

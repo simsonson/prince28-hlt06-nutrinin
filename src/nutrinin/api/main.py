@@ -23,6 +23,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         logger.info("starting", extra={"status": settings.app_env})
+        logger.info(
+            "database pool status",
+            extra={"pool_status": engine.pool.status(), "request_count": 0},
+        )
         yield
         await engine.dispose()  # close every pooled connection on shutdown
 
@@ -30,12 +34,29 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.engine = engine
     app.state.sessionmaker = make_sessionmaker(engine)
+    app.state.request_count = 0
 
     app.middleware("http")(request_context)
+
+    @app.middleware("http")
+    async def log_pool_after_50_requests(request, call_next):
+        response = await call_next(request)
+        app.state.request_count += 1
+        if app.state.request_count == 50:
+            logger.info(
+                "database pool status after 50 requests",
+                extra={
+                    "pool_status": engine.pool.status(),
+                    "request_count": app.state.request_count,
+                },
+            )
+        return response
+
     register_error_handlers(app)
 
     v1 = APIRouter(prefix="/v1")
     v1.include_router(documents.router)
+    v1.include_router(documents.stats_router)
     app.include_router(health.router)
     app.include_router(v1)
     return app
