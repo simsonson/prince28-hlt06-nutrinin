@@ -63,7 +63,7 @@ Execution Time: 1.740 ms
 Why did the planner choose a Seq Scan on my table? 
 
 ```text
-The planner chose a Sequential Scan because it estimated that reading the entire table would be faster than using an index.\
+The planner chose a Sequential Scan because it estimated that reading the entire table would be faster than using an index.
 This usually happens when the table is small, many rows are needed, or no suitable index exists.
 ```
 
