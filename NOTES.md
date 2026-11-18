@@ -60,6 +60,15 @@ Planning Time: 0.084 ms
 Execution Time: 1.740 ms
 ```
 
-Why did the planner choose a Seq Scan on my table? (2 lines, your own words)
+Why did the planner choose a Seq Scan on my table? 
+
+```text
+The planner chose a Sequential Scan because it estimated that reading the entire table would be faster than using an index.\
+This usually happens when the table is small, many rows are needed, or no suitable index exists.
+```
 
 When would it switch to the GIN index? (1 line)
+
+```text
+It switches to the GIN index when the query uses a supported indexed operation and the planner estimates that an index scan will be more efficient than a sequential scan.
+```
