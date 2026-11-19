@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: app  # pragma: allowlist secret
       POSTGRES_DB: app
     ports:
-      - "5433:5432"  # 5433 on your laptop, so it never clashes with another Postgres
+      - "5434:5432"  # 5434 avoids colliding with a local PostgreSQL server
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
