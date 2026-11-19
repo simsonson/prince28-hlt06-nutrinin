@@ -202,3 +202,9 @@ TOTAL                              344     50     42      5    82%
 Two files or lines my coverage report says are never run, and whether they matter:
 `store.py` (0%, lines 3–39): its JSON load/search/readiness code is never exercised; that matters if this store is intended to serve records.
 `logging_setup.py` (54%, missing lines 16–28): JSON formatting and logging setup paths are partly untested; this mainly affects structured logs and request-ID diagnostics.
+### Production image and Compose restart checks
+
+1. The production image ran successfully against Neon: `/ready` returned `200` with `status: ready`, database `true`, records loaded `true`, and `records_count: 20`.
+2. The largest image layer is the 96.2 MB virtual-environment copy, because it contains Python and the runtime dependencies installed by `uv`.
+3. The HTML report showed `store.py` fully red; `tests/unit/test_store.py::test_record_store_loads_and_searches_records` turns its load, readiness, search, and lookup lines green (store coverage rose to 84%).
+4. With `restart: true` under `api.depends_on.db`, `docker compose restart db` restarted the API after the database became healthy; its container ID stayed the same, but its uptime reset and health returned to starting.
