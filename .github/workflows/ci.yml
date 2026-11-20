@@ -52,6 +52,9 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked
 
+      - name: Run pre-commit hooks
+        run: uv run pre-commit run --all-files
+
       - name: Lint
         run: uv run poe lint
 

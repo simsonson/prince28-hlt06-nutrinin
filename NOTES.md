@@ -231,6 +231,23 @@ ok    /v1/documents?limit=1 -> 200
 Smoke test passed
 ```
 
+### Production approval gate
+
+- A required reviewer is worth the delay for high-risk releases, especially database, security, or data changes where a second look can prevent an expensive production mistake.
+- For small, reversible changes with strong CI and a tested rollback, the approval wait can cost more than the added assurance.
+
+### Change lead time (three latest automatic CD runs)
+
+| CD run | Merge time (IST) | “Smoke test passed” time (IST) | Change lead time |
+|---|---:|---:|---:|
+| [#12](https://github.com/simsonson/prince28-hlt06-nutrinin/actions/runs/44768546570) | 9:26:47 PM | 9:28:55 PM | 2m 08s |
+| [#15](https://github.com/simsonson/prince28-hlt06-nutrinin/actions/runs/44774748023) | 10:03:08 PM | 10:05:31 PM | 2m 23s |
+| [#16](https://github.com/simsonson/prince28-hlt06-nutrinin/actions/runs/44782991370) | 10:52:55 PM | 10:55:18 PM | 2m 23s |
+
+- Times are IST; smoke-test times use the successful GitHub Actions step completion time, which follows the script's `Smoke test passed` output.
+- **Average change lead time:** 2m 18s.
+- **Slowest CD step:** Smoke test production, about 32 seconds in each run.
+
 ### Rollback drill
 
 - **Rollback SHA:** Not performed yet.
