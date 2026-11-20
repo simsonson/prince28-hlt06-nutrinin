@@ -250,11 +250,11 @@ Smoke test passed
 
 ### Rollback drill
 
-- **Rollback SHA:** Not performed yet.
-- **Rollback started:** Not recorded.
-- **Rollback smoke test:** Not performed.
-- **Roll-forward SHA:** Not performed yet.
-- **Roll-forward duration:** Not recorded.
+- **Rollback SHA:** d01697cc692ce92f9495148cdd93c4cddc4063eb
+- **Rollback started:** 2026-11-20 09:37 IST
+- **Rollback smoke test:** PASS
+- **Roll-forward SHA:** efc4b0d81c7159750366bfa6da2b9a3959cfabe1
+- **Roll-forward duration:** 4 minutes 35 seconds
 
 **Why can the database stay on the newer schema during rollback?**
 
