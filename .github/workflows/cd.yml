@@ -1,7 +1,5 @@
 
-# CD: migrate Neon -> deploy exact image -> smoke test.
-# Rollback: Actions -> CD -> Run workflow -> paste an older commit SHA.
-
+# CD: migrate -> deploy exact image -> smoke test
 name: CD
 
 on:
@@ -13,62 +11,128 @@ on:
   workflow_dispatch:
     inputs:
       sha:
-        description: "Full commit SHA to deploy (rollback). Migrations are skipped."
+        description: "Full commit SHA to deploy (rollback)"
         required: true
         type: string
 
 permissions:
   contents: read
 
+# Serialize production deployments.
+# Keep pending deployments instead of replacing them.
 concurrency:
   group: deploy-production
-  cancel-in-progress: false
+  queue: max
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    name: Deploy NutriNIN production
+
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     environment:
       name: production
       url: ${{ vars.LIVE_URL }}
 
     env:
-      SHA: ${{ github.event.inputs.sha || github.event.workflow_run.head_sha }}
+      SHA: ${{ inputs.sha || github.event.workflow_run.head_sha }}
 
     steps:
-      # Checkout the merged commit for normal deploys.
-      # Checkout current main for rollback so the smoke script is available.
+      # Normal deployment checks out the CI-tested commit.
+      # Manual rollback checks out today's main to use current deployment scripts.
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v10.3.3
-      - uses: astral-sh/setup-uv@v10.3.3
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2
         with:
           version: "0.11.32"
           enable-cache: true
 
-      - name: Install dependencies
-        run: uv sync --locked
+      # Validate the requested commit SHA and image before changing production.
+      - name: Verify image exists in GHCR
+        run: |
+          set -euo pipefail
 
-      - name: Run migrations on Neon (normal deploys only)
+          if [[ ! "$SHA" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid commit SHA: $SHA"
+            exit 1
+          fi
+
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}:sha-${SHA}"
+
+          echo "Checking image: $IMAGE"
+
+          docker manifest inspect "$IMAGE" > /dev/null
+
+          echo "Image exists and is accessible."
+
+      # Normal deployments only.
+      # Rollback must not run migrations.
+      - name: Run Neon database migrations
         if: github.event_name == 'workflow_run'
         env:
           APP_ENV: production
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: uv run alembic upgrade head
+        run: |
+          uv sync --locked
+          uv run alembic upgrade head
 
-      - name: Tell Render to deploy this exact image
+      # Deploy the exact image tested by CI.
+      - name: Deploy exact image to Render
         env:
           HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
-          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}:sha-${SHA}"
-          ENCODED=$(python3 -c 'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' "$IMAGE")
-          echo "Deploying $IMAGE"
-          curl --fail --silent --show-error -X POST "${HOOK}&imgURL=${ENCODED}"
+          set -euo pipefail
 
-      - name: Smoke test the live URL
-        run: uv run python scripts/smoke.py "${{ vars.LIVE_URL }}" --expect-version "${SHA}"
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}:sha-${SHA}"
+
+          ENCODED=$(python3 -c \
+            'import sys, urllib.parse; print(urllib.parse.quote(sys.argv[1], safe=""))' \
+            "$IMAGE")
+
+          if [[ "$HOOK" == *"?"* ]]; then
+            SEPARATOR="&"
+          else
+            SEPARATOR="?"
+          fi
+
+          echo "Deploying image: $IMAGE"
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --request POST \
+            "${HOOK}${SEPARATOR}imgURL=${ENCODED}"
+
+          echo "Render deployment request accepted."
+
+      - name: Install dependencies for smoke test
+        run: uv sync --locked
+
+      # Wait for the exact version and verify production endpoints.
+      - name: Smoke test production
+        env:
+          LIVE_URL: ${{ vars.LIVE_URL }}
+        run: |
+          uv run python scripts/smoke.py \
+            "$LIVE_URL" \
+            --expect-version "$SHA" \
+            --timeout 600
+
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "## NutriNIN deployment successful" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: $SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Image: ghcr.io/${GITHUB_REPOSITORY,,}:sha-${SHA}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Production: ${{ vars.LIVE_URL }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Smoke test: Passed" >> "$GITHUB_STEP_SUMMARY"
