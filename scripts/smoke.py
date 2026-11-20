@@ -13,71 +13,68 @@ import urllib.error
 import urllib.request
 
 
-def get(url: str) -> tuple[int | None, object]:
-    """GET a URL and return (status, parsed JSON body). Status None = no answer."""
-    request = urllib.request.Request(url, headers={"User-Agent": "smoke-test"})
+def get(url):
+    request = urllib.request.Request(url, headers={"User-Agent": "NutriNIN-smoke-test"})
+
     try:
         with urllib.request.urlopen(request, timeout=15) as response:
             return response.status, json.loads(response.read() or b"null")
-    except urllib.error.HTTPError as error:  # 4xx / 5xx still have a body
+
+    except urllib.error.HTTPError as error:
         try:
             return error.code, json.loads(error.read() or b"null")
         except ValueError:
             return error.code, None
-    except (OSError, ValueError) as error:  # DNS, refused, timeout, not JSON
+
+    except (OSError, ValueError) as error:
         return None, str(error)
 
 
-def wait_for(url: str, ok, deadline: float, interval: int) -> tuple[bool, int | None, object]:
-    """Retry until ok(status, body) is true or the deadline passes."""
-    while True:
-        status, body = get(url)
-        if ok(status, body):
-            return True, status, body
-        if time.monotonic() > deadline:
-            return False, status, body
-        detail = body.get("version", "")[:7] if isinstance(body, dict) else ""
-        print(f"  waiting: {url} -> {status} {detail}".rstrip(), flush=True)
-        time.sleep(interval)
-
-
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
+def main():
+    parser = argparse.ArgumentParser()
     parser.add_argument("base_url")
-    parser.add_argument("--expect-version", help="commit SHA that /health must report")
-    parser.add_argument("--timeout", type=int, default=600, help="seconds to wait for the deploy")
-    parser.add_argument("--interval", type=int, default=10)
+    parser.add_argument("--expect-version")
+    parser.add_argument("--timeout", type=int, default=600)
+
     args = parser.parse_args()
     base = args.base_url.rstrip("/")
     deadline = time.monotonic() + args.timeout
 
-    # 1) Wait for the NEW version. A free instance may be asleep, and a deploy takes minutes.
-    def is_new_version(status, body):
+    # 1. Check application health and version
+    while time.monotonic() < deadline:
+        status, body = get(f"{base}/health")
+
         version = body.get("version") if isinstance(body, dict) else None
-        return status == 200 and args.expect_version in (None, version)
 
-    ok, status, body = wait_for(f"{base}/health", is_new_version, deadline, args.interval)
-    if not ok:
-        print(f"FAIL /health never reported version {args.expect_version}: {status} {body}")
-        return 1
-    print(f"ok   /health -> 200, version {body.get('version')}")
+        if status == 200 and (args.expect_version is None or version == args.expect_version):
+            print(f"OK /health -> {status}, version {version}")
+            break
 
-    # 2) Ready? Give a sleeping database (Neon scales to zero) up to a minute to wake.
-    soon = min(deadline, time.monotonic() + 60)
-    ok, status, body = wait_for(f"{base}/ready", lambda s, b: s == 200, soon, 5)
-    print(f"{'ok  ' if ok else 'FAIL'} /ready -> {status} {body}")
-    if not ok:
+        print(f"Waiting for deployment: {status} {version}")
+        time.sleep(10)
+    else:
+        print("FAIL: Expected version not available")
         return 1
 
-    # 3) One real endpoint that reads the database.
+    # 2. Check database readiness
+    status, body = get(f"{base}/ready")
+
+    if status != 200:
+        print(f"FAIL /ready -> {status} {body}")
+        return 1
+
+    print("OK /ready")
+
+    # 3. Check actual database-backed endpoint
     status, body = get(f"{base}/v1/documents?limit=1")
-    ok = status == 200 and isinstance(body, dict) and "items" in body
-    print(f"{'ok  ' if ok else 'FAIL'} /v1/documents?limit=1 -> {status}")
-    if not ok:
-        print(body)
+
+    if status != 200 or not isinstance(body, dict) or "items" not in body:
+        print(f"FAIL documents endpoint -> {status} {body}")
         return 1
 
+    print("OK /v1/documents")
     print("Smoke test passed")
+
     return 0
 
 
