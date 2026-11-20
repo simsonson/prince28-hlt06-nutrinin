@@ -1,19 +1,29 @@
 # Python
 __pycache__/
 *.py[cod]
+*.pyc
+
+# Virtual environments
 .venv/
+venv/
+
+# Python tooling
 .pytest_cache/
 .ruff_cache/
+
 # Secrets: never commit
 .env
 .env.*
 !.env.example
+
 # Big data stays out of Git
 data/raw/
+
 # Editors / OS
 .vscode/
 .idea/
 .DS_Store
+
 # Test and coverage output
 .coverage
 htmlcov/
