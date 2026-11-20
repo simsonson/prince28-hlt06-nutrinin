@@ -4,7 +4,9 @@
 
 [![Live](https://img.shields.io/website?url=https%3A%2F%2Fnutrinin.onrender.com%2Fhealth&label=live)](https://nutrinin.onrender.com/docs)
 
-[![Uptime (30 days)](https://img.shields.io/uptimerobot/ratio/804746196)](https://nutrinin.onrender.com/health)
+[![UptimeRobot](https://img.shields.io/uptimerobot/status/m804746196-5599f26d33790f04536ebac6)](https://nutrinin.onrender.com/health)
+
+![Uptime (30 Days)](https://img.shields.io/uptimerobot/ratio/m804746196-5599f26d33790f04536ebac6)
 
 **Live:** [https://nutrinin.onrender.com](https://nutrinin.onrender.com) · [API docs](https://nutrinin.onrender.com/docs) · [health](https://nutrinin.onrender.com/health)
 
