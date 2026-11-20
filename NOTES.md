@@ -276,3 +276,8 @@ The rollback workflow skips migrations, so the database remains at its newer sch
 - **Previous issue:** UptimeRobot received HTTP 405 for HEAD requests because the health route initially supported only GET.
 - **Fix:** Updated the health route to support both GET and HEAD. Local verification returned HTTP 200 for both methods. The fix is committed on `fix/health-head-support`; production monitoring must be verified after the fix is merged and deployed.
 - **One thing that would make my live app faster on its first request:** Avoid Render cold starts by using an always-on service configuration rather than allowing the service to spin down.
+
+### Human approval gate
+
+- Production approval is worth the delay for database migrations, security-sensitive changes, and high-impact releases where human verification reduces deployment risk.
+- For routine, low-risk bug fixes and documentation updates, automated tests and deployment are usually sufficient to avoid unnecessary delays.
