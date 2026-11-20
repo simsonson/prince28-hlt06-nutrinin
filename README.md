@@ -1,5 +1,16 @@
 # NutriNIN
 
+[![CI](https://github.com/simsonson/prince28-hlt06-nutrinin/actions/workflows/ci.yml/badge.svg)](https://github.com/simsonson/prince28-hlt06-nutrinin/actions/workflows/ci.yml)
+
+[![Live](https://img.shields.io/website?url=https%3A%2F%2Fnutrinin.onrender.com%2Fhealth&label=live)](https://nutrinin.onrender.com/docs)
+
+[![Uptime (30 days)](https://img.shields.io/uptimerobot/ratio/804746196)](https://nutrinin.onrender.com/health)
+
+**Live:** [https://nutrinin.onrender.com](https://nutrinin.onrender.com) · [API docs](https://nutrinin.onrender.com/docs) · [health](https://nutrinin.onrender.com/health)
+
+**Status:** Week 1 complete · live at https://nutrinin.onrender.com
+
+
 Helps a hostel mess plan balanced South Indian menus using NIN's Dietary Guidelines for Indians (2024) and the Indian Food Composition Tables.
 
 **Status:** Day 1 foundation (FastAPI skeleton, quality gates). Live URL from Day 5.
