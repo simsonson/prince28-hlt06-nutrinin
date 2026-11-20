@@ -1,5 +1,7 @@
-# CD: after CI passes on main -> migrate Neon -> deploy that exact image -> smoke test.
+
+# CD: migrate Neon -> deploy exact image -> smoke test.
 # Rollback: Actions -> CD -> Run workflow -> paste an older commit SHA.
+
 name: CD
 
 on:
@@ -7,16 +9,18 @@ on:
     workflows: [CI]
     types: [completed]
     branches: [main]
+
   workflow_dispatch:
     inputs:
       sha:
         description: "Full commit SHA to deploy (rollback). Migrations are skipped."
         required: true
+        type: string
 
 permissions:
   contents: read
 
-concurrency:  # never two deploys at once; queue instead of cancelling
+concurrency:
   group: deploy-production
   cancel-in-progress: false
 
@@ -24,21 +28,30 @@ jobs:
   deploy:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
+
     environment:
       name: production
       url: ${{ vars.LIVE_URL }}
+
     env:
       SHA: ${{ github.event.inputs.sha || github.event.workflow_run.head_sha }}
+
     steps:
-      # Normal deploy: the merged commit. Rollback: today's main (so the newest smoke test runs).
-      - uses: astral-sh/setup-uv@v10.3.3
+      # Checkout the merged commit for normal deploys.
+      # Checkout current main for rollback so the smoke script is available.
+      - name: Checkout repository
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
-      - uses: astral-sh/setup-uv@v10
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v10.3.3
         with:
           version: "0.11.32"
           enable-cache: true
-      - run: uv sync --locked
+
+      - name: Install dependencies
+        run: uv sync --locked
 
       - name: Run migrations on Neon (normal deploys only)
         if: github.event_name == 'workflow_run'
