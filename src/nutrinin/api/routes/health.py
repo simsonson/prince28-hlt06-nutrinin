@@ -9,7 +9,10 @@ router = APIRouter(tags=["health"])
 MIN_EXPECTED_RECORDS = 20
 
 
-@router.get("/health")
+@router.api_route(
+    "/health",
+    methods=["GET", "HEAD"],
+)
 def health(settings: SettingsDep) -> dict[str, str]:
     """Liveness: is the process alive? Never touches the DB."""
     return {
