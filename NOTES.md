@@ -208,3 +208,54 @@ Two files or lines my coverage report says are never run, and whether they matte
 2. The largest image layer is the 96.2 MB virtual-environment copy, because it contains Python and the runtime dependencies installed by `uv`.
 3. The HTML report showed `store.py` fully red; `tests/unit/test_store.py::test_record_store_loads_and_searches_records` turns its load, readiness, search, and lookup lines green (store coverage rose to 84%).
 4. With `restart: true` under `api.depends_on.db`, `docker compose restart db` restarted the API after the database became healthy; its container ID stayed the same, but its uptime reset and health returned to starting.
+
+
+## D05 · CI/CD and going live
+
+- **Live URL:** https://nutrinin.onrender.com
+- **CI run for CI/CD pull request (#11):** GitHub Actions run #16 — https://github.com/simsonson/prince28-hlt06-nutrinin/actions
+- **First automatic CD run:** GitHub Actions CD run #11 — https://github.com/simsonson/prince28-hlt06-nutrinin/actions
+- **CI/CD merge commit:** `a3234e72f93d41c73df471f844f3512bc82449a3`
+- **Latest production version previously verified:** `5c588adc65ae280355cd25ec05f3382ddf11e55b`
+- **Merge clicked at:**  9:05 PM IST
+- **"Smoke test passed" at:** 9:07 PM IST
+- **Lead time:** 2 minutes.
+- **CD run duration:** 3 minutes 13 seconds.
+
+### Smoke test output from that CD run
+
+```text
+ok    /health -> 200, version a3234e72f93d41c73df471f844f3512bc82449a3
+ok    /ready -> 200 {'status': 'ready', 'checks': {'database': True, 'records_loaded': True}, 'records_count': 20}
+ok    /v1/documents?limit=1 -> 200
+Smoke test passed
+```
+
+### Rollback drill
+
+- **Rollback SHA:** Not performed yet.
+- **Rollback started:** Not recorded.
+- **Rollback smoke test:** Not performed.
+- **Roll-forward SHA:** Not performed yet.
+- **Roll-forward duration:** Not recorded.
+
+**Why can the database stay on the newer schema during rollback?**
+
+The rollback workflow skips migrations, so the database remains at its newer schema. This is safe only if the older application version remains backward-compatible with that schema; this compatibility must be verified before treating the rollback as safe.
+
+### Where my secrets live
+
+- **Neon connection string:** GitHub Secret `DATABASE_URL` and Render environment configuration. Not committed to Git or included in the application image.
+- **Render deploy hook:** GitHub Secret `RENDER_DEPLOY_HOOK` only.
+- **Live URL variable:** GitHub Actions variable `LIVE_URL` = `https://nutrinin.onrender.com`.
+
+### Monitoring
+
+- **Monitoring service:** UptimeRobot.
+- **Monitor ID:** `804746196`.
+- **Endpoint:** `https://nutrinin.onrender.com/health`.
+- **Check interval:** Every 5 minutes.
+- **Alerts:** Email notifications configured.
+- **Previous issue:** UptimeRobot received HTTP 405 for HEAD requests because the health route initially supported only GET.
+- **Fix:** Updated the health route to support both GET and HEAD. Local verification returned HTTP 200 for both methods. The fix is committed on `fix/health-head-support`; production monitoring must be verified after the fix is merged and deployed.
+- **One thing that would make my live app faster on its first request:** Avoid Render cold starts by using an always-on service configuration rather than allowing the service to spin down.
