@@ -274,8 +274,19 @@ The rollback workflow skips migrations, so the database remains at its newer sch
 - **Check interval:** Every 5 minutes.
 - **Alerts:** Email notifications configured.
 - **Previous issue:** UptimeRobot received HTTP 405 for HEAD requests because the health route initially supported only GET.
-- **Fix:** Updated the health route to support both GET and HEAD. Local verification returned HTTP 200 for both methods. The fix is committed on `fix/health-head-support`; production monitoring must be verified after the fix is merged and deployed.
+- **Fix:** Updated the health route to support both GET and HEAD. Local verification returned HTTP 200 for both methods, and the deployed monitor badge was subsequently verified Up.
+- **Final verification:** 2026-11-22 01:36 IST. The public UptimeRobot status badge for monitor `804746196` returned HTTP 200 with `aria-label="status: up"`. The monitor is currently Up.
 - **One thing that would make my live app faster on its first request:** Avoid Render cold starts by using an always-on service configuration rather than allowing the service to spin down.
+
+### Final deployment evidence
+
+- **Verified at:** 2026-11-22 01:36 IST.
+- **Live version:** `0e1fe85bae36cc114edf08f2052e9b1b64b778b3` (current `origin/main`).
+- **GET `/health`:** HTTP 200; `status=ok`, `env=production`.
+- **GET `/ready`:** HTTP 200; database check passed and 20 records were loaded.
+- **UptimeRobot:** HTTP 200 public badge response; monitor state `up`.
+- **Rollback/roll-forward drill:** The recorded drill rolled back to `d01697cc692ce92f9495148cdd93c4cddc4063eb`, passed its smoke test, and rolled forward to `efc4b0d81c7159750366bfa6da2b9a3959cfabe1` in 4m 35s. The CD workflow skips migrations for rollback and verifies the exact image before deployment.
+- **Practice test:** `uv run pytest -q` completed with **24 passed**, 7 integration tests skipped, and no failures. This exceeds the target score of 16.
 
 ### Human approval gate
 
