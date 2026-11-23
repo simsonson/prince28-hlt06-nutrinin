@@ -160,6 +160,22 @@ async def test_refresh_sends_etag_and_records_not_modified(tmp_path):
     assert len(raw_files(tmp_path)) == 1
 
 
+async def test_refresh_block_does_not_replace_existing_download(tmp_path):
+    sources = make_sources(1)
+    await FakeSite().run(sources, tmp_path)
+
+    blocked = FakeSite(robots="User-agent: *\nDisallow: /\n")
+    counts = await blocked.run(sources, tmp_path, refresh=True)
+
+    assert counts["blocked"] == 1
+    assert await FakeSite().run(sources, tmp_path) == {
+        "downloaded": 0,
+        "skipped": 1,
+        "blocked": 0,
+        "failed": 0,
+    }
+
+
 async def test_resume_fetches_only_what_is_missing(tmp_path):
     site = FakeSite()
 

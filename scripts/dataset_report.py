@@ -83,6 +83,14 @@ def load_records() -> list[dict]:
             record = json.loads(line)
         except json.JSONDecodeError:
             continue
+        previous = latest.get(record["url"])
+        if (
+            previous
+            and previous.get("status") in {"downloaded", "not_modified"}
+            and record.get("status") in {"blocked", "failed"}
+            and Path(previous.get("path", "")).is_file()
+        ):
+            continue
         latest[record["url"]] = record
     return list(latest.values())
 

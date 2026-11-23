@@ -173,6 +173,14 @@ class Manifest:
                     record = json.loads(line)
                 except json.JSONDecodeError:
                     continue  # an empty line, or a line cut off when a run was killed
+                previous = self.records.get(record["url"])
+                if (
+                    previous
+                    and previous.get("status") in {"downloaded", "not_modified"}
+                    and record.get("status") in {"blocked", "failed"}
+                    and (path.parent.parent / previous["path"]).is_file()
+                ):
+                    continue
                 self.records[record["url"]] = record
             if text and not text.endswith("\n"):  # repair a cut-off last line
                 with path.open("a", encoding="utf-8") as handle:
@@ -317,6 +325,7 @@ async def fetch_one(
     """Download one source with retries. Always returns a manifest record, never raises."""
     record = {
         "url": src.url,
+        "site": urlsplit(src.url).netloc,
         "source": src.source,
         "licence": src.licence,
         "title": src.title,
@@ -342,7 +351,9 @@ async def fetch_one(
             await gate.wait(host, crawl_delay)
             try:
                 async with asyncio.timeout(ATTEMPT_TIMEOUT):
+                    started = time.perf_counter()
                     fields = await _download(client, src, root, raw_dir, etag)
+                    fields["duration_seconds"] = round(time.perf_counter() - started, 3)
                 if fields.get("status") == "not_modified":
                     retained = {
                         key: previous[key]
@@ -422,11 +433,14 @@ async def fetch_all(
             else:
                 counts[record["status"]] += 1
             before = manifest.records.get(record["url"], {})
+            preserves_success = before.get("status") in {"downloaded", "not_modified"} and record[
+                "status"
+            ] in {"blocked", "failed"}
             same_problem = (before.get("status"), before.get("error")) == (
                 record["status"],
                 record.get("error"),
             )
-            if record["status"] == "downloaded" or not same_problem:
+            if not preserves_success and (record["status"] == "downloaded" or not same_problem):
                 manifest.add(record)  # written at once: a kill loses only the files in flight
             if on_result:
                 on_result(record)

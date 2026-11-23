@@ -3,7 +3,7 @@
 Full corpus target: + Nutrient Requirements 2020 report, NIN recipe and public-health booklets (2,000+ pages)
 
 <!-- generated:start -->
-## Measured on my start corpus (2026-11-23 15:14 UTC)
+## Measured on my start corpus (2026-11-23 16:50 UTC)
 
 | What | Value |
 |---|---|
@@ -45,7 +45,7 @@ Assumptions: 4 characters per token, 400-token chunks, 768-dimension embeddings 
 
 ## Object storage
 
-- Status: pending Cloudflare sign-in and R2 bucket creation.
+- Status: uploaded and verified in the configured Supabase S3-compatible bucket `nutrinin-raw`.
 - Planned prefix: `data/raw/`, preserving the local relative paths as object keys.
 - Credentials belong only in `.env` (`R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`).
-- Current uploadable files: 10; the measured source documents total 63.6 MB.
+- Current upload: 10 objects, 63,625,537 bytes (63.6 MB); every object was verified with `head_object`.

@@ -332,3 +332,21 @@ The report initially showed an empty corpus because its generated sections were 
 - Per source: `nin` — 10 downloaded files, 63.6 MB; 2 latest source entries are permission-blocked.
 - Slowest site: not available; per-request timing is not retained in the manifest.
 - Retries: 0 downloaded files needed more than one attempt; duplicate content groups: 0, with 0 extra URLs sharing bytes.
+- Object storage: 10 `data/raw/` objects uploaded to Supabase bucket `nutrinin-raw`, totaling 63,625,537 bytes; each key was verified with `head_object`.
+
+
+## D06 ¯ Object storage
+- Object Storage:
+Supabase Storage (S3-compatible API)
+
+- Bucket:
+nutrinin-raw
+
+- Upload method:
+AWS CLI (S3 sync)
+
+- Access:
+Private bucket using server-side credentials
+
+- Purpose:
+Store raw NIN/ICMR PDFs for NutriNIN ingestion workers.
