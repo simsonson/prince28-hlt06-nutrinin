@@ -27,3 +27,5 @@ data/raw/
 # Test and coverage output
 .coverage
 htmlcov/
+
+source/*.pdf

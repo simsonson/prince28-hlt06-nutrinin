@@ -22,17 +22,19 @@ The application stores normalized food-composition records and source metadata. 
 
 ## 3. Usage Terms and Attribution
 
-- These references are publicly accessible ICMR-NIN publications and food-composition resources.
-- NutriNIN uses the references for research, information retrieval, attribution and nutritional calculation support.
-- Publisher attribution, publication titles, editions, publication years, page references, table numbers and food codes must be retained when transforming source information.
-- NutriNIN must not be represented as an ICMR-NIN product or imply institutional endorsement.
-- Public availability does not automatically grant unrestricted redistribution rights. Before redistributing complete publications or bulk extracts, verify the publisher's current copyright and reuse conditions.
-- Derived nutrient values should be published with their source citations, ingredient quantities, calculation inputs and units.
+- The Dietary Guidelines for Indians 2024 and Indian Food Composition Tables 2017 are published by ICMR-National Institute of Nutrition.
+- Both publications permit personal reproduction with full acknowledgment of the source.
+- Their copyright notices restrict electronic storage or reproduction for creating a product without prior written permission from the National Institute of Nutrition, Hyderabad.
+- NutriNIN must obtain written permission before importing or storing bulk publication content or food-composition extracts in its application.
+- Public accessibility does not imply unrestricted redistribution or commercial reuse rights.
+- Every permitted use must retain publication title, edition, year, page, table number and original food code wherever applicable.
+- NutriNIN must not imply ICMR-NIN endorsement.
+- Permission status must be recorded for each source before automated collection or product ingestion.
 
 ## 4. Reference Links
 
-- [ICMR-NIN official website](https://www.nin.res.in/)
-- [Indian Food Composition Tables 2017 reference site](https://www.ifct2017.com/)
+- [Official IFCT 2017 PDF](https://www.nin.res.in/ebooks/IFCT2017.pdf)
+- [Official NIN downloads](https://www.nin.res.in/downloads/)
 
 ## 5. Source Traceability Requirements
 
@@ -47,6 +49,33 @@ For every imported food-composition record, NutriNIN should preserve:
 
 This metadata ensures that calculated nutrient values can be traced back to their original sources.
 
-**Last reviewed:** 22 November 2026 (IST)
+## 6. Inspected Source Documents
+
+The following source files have been obtained and inspected for the initial NutriNIN corpus.
+
+| Source ID | Document | Format | Pages | Inspection result |
+|---|---|---|---:|---|
+| IFCT2017 | Indian Food Composition Tables 2017 | PDF | 584 | Food tables and copyright notice inspected |
+| DGI2024 | Dietary Guidelines for Indians 2024 | PDF | 148 | Dietary guidelines and copyright notice inspected |
+| NR2020_BRIEF | Nutrient Requirements for Indians 2020 – Brief Note | PDF | 6 | EAR, RDA and nutrient requirement summary inspected |
+
+### Important extraction notes
+
+- IFCT 2017 contains 528 key foods and 151 food components.
+- IFCT 2017 food composition values are for raw foods, except eggs.
+- Raw and cooked ingredient weights must not be treated as interchangeable.
+- The 2020 brief note is not a substitute for the complete Nutrient Requirements report.
+- Both IFCT 2017 and Dietary Guidelines 2024 require prior written NIN permission for electronic storage or reproduction for creating a product.
+- Automated bulk extraction and product ingestion remain blocked until the necessary permissions are confirmed.
+
+### Local inspection files
+
+- `IFCT2017.pdf`
+- `DGI_2024.pdf`
+- `brief_note.pdf`
+
+These are inspection copies, not permission to redistribute or publish the original documents.
+
+**Last reviewed:** 23 November 2026 (IST)
 
 **Project:** NutriNIN — HLT-06
