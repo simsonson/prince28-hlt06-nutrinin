@@ -1,4 +1,4 @@
-# Engineering notes: NutriNIN
+﻿# Engineering notes: NutriNIN
 
 ## D03 - PostgreSQL
 
@@ -98,13 +98,13 @@ For this small table, the index lookup and heap fetch would add work without sav
 The planner will prefer the GIN index when the query uses an indexed JSONB operator such as `@>` and the table is large and selective enough for that path to cost less than a sequential scan.
 
 
-## D04 · Docker, Compose and tests
+## D04 Â· Docker, Compose and tests
 
 ### The image
 
 ```text
 docker images nutrinin:dev
-                                                                                           i Info →   U  In Use
+                                                                                           i Info â†’   U  In Use
 IMAGE          ID             DISK USAGE   CONTENT SIZE   EXTRA
 nutrinin:dev   8258d8250fb4        300MB           70MB
 
@@ -125,10 +125,10 @@ uid=999(app) gid=999(app) groups=999(app)
 docker compose ps -a
 
 NAME                 IMAGE                    COMMAND                  SERVICE   CREATED         STATUS                     PORTS
-nutrinin-api-1       nutrinin-api             "sh -c 'exec uvicorn…"   api       5 minutes ago   Up 5 minutes (healthy)     0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
-nutrinin-db-1        pgvector/pgvector:pg17   "docker-entrypoint.s…"   db        5 minutes ago   Up 5 minutes (healthy)     0.0.0.0:5434->5432/tcp, [::]:5434->5432/tcp
-nutrinin-migrate-1   nutrinin-migrate         "sh -c 'alembic upgr…"   migrate   5 minutes ago   Exited (0) 5 minutes ago
-nutrinin-redis-1     redis:7-alpine           "docker-entrypoint.s…"   redis     5 minutes ago   Up 5 minutes (healthy)     0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+nutrinin-api-1       nutrinin-api             "sh -c 'exec uvicornâ€¦"   api       5 minutes ago   Up 5 minutes (healthy)     0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
+nutrinin-db-1        pgvector/pgvector:pg17   "docker-entrypoint.sâ€¦"   db        5 minutes ago   Up 5 minutes (healthy)     0.0.0.0:5434->5432/tcp, [::]:5434->5432/tcp
+nutrinin-migrate-1   nutrinin-migrate         "sh -c 'alembic upgrâ€¦"   migrate   5 minutes ago   Exited (0) 5 minutes ago
+nutrinin-redis-1     redis:7-alpine           "docker-entrypoint.sâ€¦"   redis     5 minutes ago   Up 5 minutes (healthy)     0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
 
 docker compose logs migrate   (first up, then after down + up)
 
@@ -142,9 +142,9 @@ migrate-1  | records=20 inserted=20 updated=0 unchanged=0 deleted=0
 ### Breaking the database on purpose
 
 ```text
-db stopped:  /health → {"status":"ok","app":"nutrinin","env":"local"}
-db stopped:  /ready  → {"status":"not_ready","checks":{"database":false,"records_loaded":false}, "records_count":0}
-db started:  /ready  → {"status":"ready","checks":{"database":true,"records_loaded":true},"records_count":20}
+db stopped:  /health â†’ {"status":"ok","app":"nutrinin","env":"local"}
+db stopped:  /ready  â†’ {"status":"not_ready","checks":{"database":false,"records_loaded":false}, "records_count":0}
+db started:  /ready  â†’ {"status":"ready","checks":{"database":true,"records_loaded":true},"records_count":20}
 ```
 
 Why should a load balancer stop sending traffic here but not restart the app?
@@ -155,9 +155,9 @@ The load balancer should stop routing to this instance while `/ready` returns 50
 ### Tests and coverage
 
 ```text
-uv run poe test              → 22 passed in 0.61s
-uv run poe test-integration  → 7 passed in 4.15s
-coverage TOTAL, unit only    →
+uv run poe test              â†’ 22 passed in 0.61s
+uv run poe test-integration  â†’ 7 passed in 4.15s
+coverage TOTAL, unit only    â†’
 
 =============================================== tests coverage ===============================================
 ______________________________ coverage: platform win32, python 3.12.13-final-0 ______________________________
@@ -178,7 +178,7 @@ TOTAL                              344     78     42      3    73%
 9 files skipped due to complete coverage.
 22 passed, 7 skipped in 3.59s
 
-coverage TOTAL, with integration tests →
+coverage TOTAL, with integration tests â†’
 
 =============================================== tests coverage ===============================================
 ______________________________ coverage: platform win32, python 3.12.13-final-0 ______________________________
@@ -200,8 +200,8 @@ TOTAL                              344     50     42      5    82%
 ```
 
 Two files or lines my coverage report says are never run, and whether they matter:
-`store.py` (0%, lines 3–39): its JSON load/search/readiness code is never exercised; that matters if this store is intended to serve records.
-`logging_setup.py` (54%, missing lines 16–28): JSON formatting and logging setup paths are partly untested; this mainly affects structured logs and request-ID diagnostics.
+`store.py` (0%, lines 3â€“39): its JSON load/search/readiness code is never exercised; that matters if this store is intended to serve records.
+`logging_setup.py` (54%, missing lines 16â€“28): JSON formatting and logging setup paths are partly untested; this mainly affects structured logs and request-ID diagnostics.
 ### Production image and Compose restart checks
 
 1. The production image ran successfully against Neon: `/ready` returned `200` with `status: ready`, database `true`, records loaded `true`, and `records_count: 20`.
@@ -210,11 +210,11 @@ Two files or lines my coverage report says are never run, and whether they matte
 4. With `restart: true` under `api.depends_on.db`, `docker compose restart db` restarted the API after the database became healthy; its container ID stayed the same, but its uptime reset and health returned to starting.
 
 
-## D05 · CI/CD and going live
+## D05 Â· CI/CD and going live
 
 - **Live URL:** https://nutrinin.onrender.com
-- **CI run for CI/CD pull request (#11):** GitHub Actions run #16 — https://github.com/simsonson/prince28-hlt06-nutrinin/actions
-- **First automatic CD run:** GitHub Actions CD run #11 — https://github.com/simsonson/prince28-hlt06-nutrinin/actions
+- **CI run for CI/CD pull request (#11):** GitHub Actions run #16 â€” https://github.com/simsonson/prince28-hlt06-nutrinin/actions
+- **First automatic CD run:** GitHub Actions CD run #11 â€” https://github.com/simsonson/prince28-hlt06-nutrinin/actions
 - **CI/CD merge commit:** `a3234e72f93d41c73df471f844f3512bc82449a3`
 - **Latest production version previously verified:** `5c588adc65ae280355cd25ec05f3382ddf11e55b`
 - **Merge clicked at:**  9:05 PM IST
@@ -238,7 +238,7 @@ Smoke test passed
 
 ### Change lead time (three latest automatic CD runs)
 
-| CD run | Merge time (IST) | “Smoke test passed” time (IST) | Change lead time |
+| CD run | Merge time (IST) | â€œSmoke test passedâ€ time (IST) | Change lead time |
 |---|---:|---:|---:|
 | [#12](https://github.com/simsonson/prince28-hlt06-nutrinin/actions/runs/44768546570) | 9:26:47 PM | 9:28:55 PM | 2m 08s |
 | [#15](https://github.com/simsonson/prince28-hlt06-nutrinin/actions/runs/44774748023) | 10:03:08 PM | 10:05:31 PM | 2m 23s |
@@ -292,3 +292,43 @@ The rollback workflow skips migrations, so the database remains at its newer sch
 
 - Production approval is worth the delay for database migrations, security-sensitive changes, and high-impact releases where human verification reduces deployment risk.
 - For routine, low-risk bug fixes and documentation updates, automated tests and deployment are usually sufficient to avoid unnecessary delays.
+
+
+## D06 Â· Collecting the corpus
+
+- Start target: Dietary Guidelines 2024 + IFCT 2017 tables
+- Collected today: 10 files, 1,031 measured pages, 63.6 MB (from DATASET.md)
+- Doors used: URL list
+
+### Licence check
+
+| Source | Licence or terms, in my words | May I show full text in answers? |
+|---|---|---|
+| ICMR-NIN | Publicly accessible; registry records written permission as required for product storage or reproduction | Do not show full text unless permission explicitly covers that use |
+
+### robots.txt
+
+- Site: `www.nin.res.in` (also `nin.res.in`). The downloader fetches `/robots.txt` and applies its rules before requesting source URLs; exact directives were not saved in the manifest, so I cannot quote them reliably from this run.
+- No downloaded URL was marked blocked by robots.txt; 2 latest manifest entries remain permission-blocked. The collector did not bypass restrictions.
+
+### Kill and resume
+
+- Run 1: Ctrl+C point is not recorded in the manifest/log available in the repo.
+- Run 2: 10 files are currently downloaded; the original run counters were not retained, so they cannot be reconstructed exactly.
+- Run 3: downloaded=0, skipped=10 on a rerun with the same completed URLs (expected resume behavior; confirm from console output if retained).
+
+### Capacity (from docs/CAPACITY.md)
+
+- Tokens per page, measured: 222 estimated tokens/page (characters Ã· 4; low confidence because IFCT has no extracted page count and one PDF is nearly textless)
+- Full corpus: 0.44 M tokens, 1,276 chunks, embedding about Rs 7, vectors 4 MB
+- The number that surprised me most, and why: only 222 estimated tokens/page; extraction gaps make this a likely underestimate, so OCR and a real tokenizer may change it substantially.
+
+### One thing that went wrong today, and how I fixed it
+
+The report initially showed an empty corpus because its generated sections were stale. Reran `scripts/dataset_report.py` against the current manifest; it measured 10 downloaded files and exposed one unmeasured file plus a likely scanned PDF.
+
+### Stretch metrics from `data/manifest.jsonl`
+
+- Per source: `nin` — 10 downloaded files, 63.6 MB; 2 latest source entries are permission-blocked.
+- Slowest site: not available; per-request timing is not retained in the manifest.
+- Retries: 0 downloaded files needed more than one attempt; duplicate content groups: 0, with 0 extra URLs sharing bytes.

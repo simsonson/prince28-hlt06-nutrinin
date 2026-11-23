@@ -1,0 +1,19 @@
+# NutriNIN source registry
+# Sources for NutriNIN. One row per file to download. Lines starting with # are notes.
+# Start target: Dietary Guidelines 2024 + IFCT 2017 tables
+# Where to look:
+#   https://www.nin.res.in/
+#   https://www.ifct2017.com/
+# Terms on my project card: Public ICMR-NIN publications. Cite guideline and table numbers.
+# Do not download sources until permission is explicitly approved.
+url,source,licence,title,permission_status
+https://www.nin.res.in/ebooks/IFCT2017.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Indian Food Composition Tables 2017, approved
+https://nin.res.in/dietaryguidelines/pdfjs/locale/DGI_2024.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Dietary Guidelines for Indians 2024, approved
+https://www.nin.res.in/downloads/DietaryGuidelinesforNINwebsite.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Dietary Guidelines for Indians 2024 (NIN website), approved
+https://www.nin.res.in/downloads/NNMBReport06Nov20.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", National Nutrition Monitoring Bureau (NNMB) Report 2020, approved
+https://www.nin.res.in/downloads/Report_Of_The_NNBB_NCAER94-95.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", National Nutrition Monitoring Bureau (NNMB) Report 1994-95, approved
+https://www.nin.res.in/downloads/Reports-for%20the%2025%20years(1972-97).pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", National Nutrition Monitoring Bureau (NNMB) Report 1972-1997, approved
+https://www.nin.res.in/downloads/Special_Report_on_Elderly&_Adolescents%20Diet_&_Nutritional_St.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Special Report on Elderly & Adolescents Diet & Nutritional Status, approved
+https://www.nin.res.in/downloads/Report_Of_Urban_Population_75-80.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", National Nutrition Monitoring Bureau (NNMB) Report 1975-1980, approved
+https://www.nin.res.in/downloads/Report_for_the_year_1977.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", National Nutrition Monitoring Bureau (NNMB) Report 1977, approved
+https://www.nin.res.in/downloads/Report_for_the_year_1979.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", National Nutrition Monitoring Bureau (NNMB) Report 1979, approved
