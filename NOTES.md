@@ -350,3 +350,50 @@ Private bucket using server-side credentials
 
 - Purpose:
 Store raw NIN/ICMR PDFs for NutriNIN ingestion workers.
+
+### D07 · Parsing my corpus
+
+## Parser comparison
+
+<!-- parsers:start -->
+| File | Parsers (A / B) | Pages | A found | B found | Time (A / B) | Better, why |
+|---|---|---|---|---|---|---|
+| dgi-2024-1861f1dd.pdf | PyMuPDF / pypdf | 148 | 363,093 chars, 1057 headings, 57 tables | 314,369 chars, 1 headings, 0 tables | 35.13 s / 20.00 s | PyMuPDF: more text, headings, and 57 tables |
+| ifct2017-5c74e0d0.pdf | PyMuPDF / pypdf | 585 | 1,375,884 chars, 16328 headings, 226 tables | FAILED: corrupt | 39.66 s / 0.08 s | PyMuPDF parsed it; pypdf failed |
+| reports-for-the-25-years-1972-97-79272799.pdf | PyMuPDF / pypdf | 90 | 48,366 chars, 62 headings, 35 tables | 43,085 chars, 0 headings, 0 tables | 9.40 s / 0.25 s | PyMuPDF: more text and 35 tables |
+| special-report-on-elderly-adolescents-diet-nutri | PyMuPDF / pypdf | 114 | 166,587 chars, 130 headings, 99 tables | 106,244 chars, 1 headings, 0 tables | 27.13 s / 1.80 s | PyMuPDF: more text, headings, and 99 tables |
+| dietaryguidelinesforninwebsite-e40419ab.pdf | PyMuPDF / pypdf | 139 | 214,454 chars, 109 headings, 43 tables | 201,798 chars, 14 headings, 0 tables | 15.23 s / 5.40 s | PyMuPDF: more text, headings, and 43 tables |
+| nnmbreport06nov20-3dd70499.pdf | PyMuPDF / pypdf | 166 | 371,259 chars, 714 headings, 196 tables | 255,917 chars, 0 headings, 0 tables | 87.71 s / 9.96 s | PyMuPDF: more text, headings, and 196 tables |
+| report-for-the-year-1979-be37a2b0.pdf | PyMuPDF / pypdf | 96 | 136,465 chars, 14 headings, 90 tables | 68,960 chars, 0 headings, 0 tables | 24.02 s / 2.21 s | PyMuPDF: more text, headings, and 90 tables |
+| report-of-the-nnbb-ncaer94-95-5a21bdac.pdf | PyMuPDF / pypdf | 114 | 76,969 chars, 54 headings, 29 tables | FAILED: corrupt | 5.75 s / 0.07 s | PyMuPDF parsed it; pypdf failed |
+| report-of-urban-population-75-80-e1dc6dc5.pdf | PyMuPDF / pypdf | 142 | 169,131 chars, 20 headings, 161 tables | 93,022 chars, 0 headings, 0 tables | 18.61 s / 1.32 s | PyMuPDF: more text, headings, and 161 tables |
+| report-for-the-year-1977-89248589.pdf | PyMuPDF / pypdf | 22 | 17,092 chars, 7 headings, 6 tables | 13,942 chars, 0 headings, 0 tables | 0.85 s / 0.07 s | PyMuPDF: more text, headings, and 6 tables |
+<!-- parsers:end -->
+
+### Parsing stats
+
+- Files in the manifest: 10 · parsed: 10 · failed: 0 · pages in Postgres: 1,616
+- Parsing coverage: 100% of files (10/10 manifest files; counted by matching manifest SHA-256 values to Postgres)
+
+### Failures by reason
+
+| Reason | Files | What I did |
+|---|---|---|
+| No current corpus parse failures | 0 | No action needed; all 10 manifest files are present in Postgres |
+
+- The comparison exposed a parser-specific failure: `ifct2017-5c74e0d0.pdf`, reason `corrupt` in pypdf; I used PyMuPDF, which parsed all 585 pages and detected 226 tables. The other pypdf failure was `report-of-the-nnbb-ncaer94-95-5a21bdac.pdf`, also parsed by PyMuPDF.
+
+### What I saw when I read my parsed pages
+
+- A page where the heading path is right (document, page, path): *Dietary Guidelines*, p. 22, `DIETARY GUIDELINES → Eat variety of foods to ensure a balanced diet → enable them to be fit and active` (page text begins with Guideline 1).
+- Something that came out wrong (document, page, what): *National Nutrition Monitoring Bureau*, p. 39, a wide table became generic `Col1`–`Col15` columns with mostly empty cells, so the column labels and layout were not preserved usefully.
+- A table: Markdown grid or loose text? (document, page): Markdown grid, *Dietary Guidelines*, p. 15 (`|Particulars|Col2|...` and separator rows); some headers are still generic.
+
+### My parser choice
+
+- For PDFs I use **PyMuPDF** because on the 10-file comparison it detected tables on all 10 (6–226 per file), while pypdf detected 0 on its 8 successful files and failed on 2. For the Dietary Guidelines 2024 PDF, PyMuPDF found 363,093 chars and 1,057 headings versus pypdf's 314,369 chars and 1 heading; it was slower (35.13 s vs 20.00 s), but the structure is much more useful.
+- A kind of document in my corpus that neither parser handles well: very wide, dense tabular reports such as IFCT 2017; PyMuPDF detects tables, but the page comparison shows extracted cell structure can still be incomplete or generic. OCR would also be needed for any scanned pages without a text layer.
+
+### One thing that went wrong today, and how I fixed it
+
+`uv run` first failed because the default uv cache under the user profile was inaccessible (`Access is denied`). I reran with `UV_CACHE_DIR=D:\NutriNIN\.uv-cache`, inside the workspace; the comparison completed and updated this section.
