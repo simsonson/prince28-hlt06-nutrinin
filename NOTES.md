@@ -402,33 +402,79 @@ Store raw NIN/ICMR PDFs for NutriNIN ingestion workers.
 ### D08 · LLM gateway
 
 - Primary: gemini-3.8-flash (Gemini) · fallback: openai/gpt-oss-20b (Groq)
-- First question on my laptop: first words after ___ s, total ___ s, tokens in ___ / out ___, cost Rs ___
-- Same question on my live URL (second, awake request): first words after ___ s. Day 1 target: under 1.5 s
+- First question on my laptop: first words after 1.31 s, total 2.75 s, tokens in 188 / out 87, cost Rs 0.026020. The local default actually used `gemini-3.5-flash-lite`; a direct `gemini-3.8-flash` probe returned HTTP 503 (high demand).
+- Same question on my live URL (second, awake request): not measurable; both `/v1/chat` requests returned HTTP 404. `/health` was 200, so the deployed service was awake but did not expose the chat route. Day 1 target: under 1.5 s.
 
 ### Tokens: English against Tamil
 
 | Message | tokens in |
 |---|---|
-| "Hi" (baseline: mostly my system prompt) | |
-| The English sentence | |
-| The same sentence in Tamil | |
+| "Hi" (baseline: mostly my system prompt) | 172 |
+| "How much protein should I eat each day?" | 180 |
+| "நான் ஒவ்வொரு நாளும் எவ்வளவு புரதம் சாப்பிட வேண்டும்?" | 181 |
 
-- The Tamil message needs about ___ times the tokens of the English one.
+- The Tamil message needs about 1.01 times the tokens of the English one (181 / 180 in this run).
 
 ### What the model does without my documents
 
-- Question 6 ("What will vegetable prices be at Koyambedu market tomorrow?"): did it admit it can't know? Its exact words:
-- A detail it got wrong or invented (question → what it said → what is true):
-- The off-topic question: did it decline in one sentence?
+- Question 6 ("What will vegetable prices be at Koyambedu market tomorrow?"): yes. Its exact words: “That question is outside this product's subject.”
+- A detail it got wrong or invented (question → what it said → what is true): My Plate question → Groq said vegetables were “about half” but then invented “one-third” for vegetables and “another one-third” for fruits → NIN Figure 1.3 specifies 400 g vegetables and 100 g fruits; vegetables, fruits, GLV, roots and tubers together form roughly half the recommended foods, not a one-third fruit allocation.
+- The off-topic question: yes. For “How do I fix a flat bicycle tyre?” it declined in one sentence: “That question is outside this product's subject.”
 
 ### Fallback and circuit breaker
 
-- With the primary broken: provider ________ , fallback ____ , first words after ___ s
-- The question at which "llm call gemini … error" stopped appearing in the log: number ___
+- With the primary broken: provider `groq`, fallback model `openai/gpt-oss-20b`, first words after 6.96 s (7.49 s total).
+- The question at which "llm call gemini … error" stopped appearing in the log: number 4 in the controlled sequence (the third request after the initial broken-primary request).
 
 ### The bill
 
-- /v1/usage today: calls ___ , errors ___ , fallbacks ___ , cost Rs ___
-- Average per answered question: Rs ___ (my Day 1 target: under Rs 0.50)
+- /v1/usage today: calls 74, errors 10, fallbacks 14, cost Rs 0.6638.
+- Average per answered model call: Rs 0.0104 (Rs 0.6638 / 64 successful calls; my Day 1 target: under Rs 0.50).
 
 ### One thing that went wrong today, and how I fixed it
+
+The first local gateway measurement returned `ConnectError` because the API process did not have network access in the sandbox. I restarted the local API with network access and reran the measurement successfully. The live deployment still needs a `/v1/chat` route before its latency can be measured.
+
+## D09 · Prompt versions compared
+
+<!-- prompts:start -->
+
+| Prompt version | Correct | Accuracy | Invalid replies | Avg tokens in |
+|---|---|---|---|---|
+| classify_v1 | 13/20 | 65% | 0 | 51 |
+| classify_v2 | 20/20 | 100% | 0 | 244 |
+| classify_v3 | 20/20 | 100% | 0 | 392 |
+| classify_v4 | 20/20 | 100% | 0 | 359 |
+
+<!-- prompts:end -->
+
+- `classify_v1` missed 7 of 20: it rejected hostel and South Indian nutrition questions as off-topic, treated a millet substitution question as personal, misclassified the Koyambedu price prediction, and accepted unrelated questions and the instruction-injection example as `docs`.
+- `classify_v2` reached 20/20 by clarifying that the tagged question is data, defining the three routing categories for NutriNIN, and requiring a one-word label. `classify_v3` added representative examples; it also scored 20/20, with a higher average input length of 392 tokens.
+- `classify_v4` starts from v2 and adds an explicit instruction to treat attempts inside the question to change the rules or dictate a label as content. It scored 20/20 too (359 average input tokens), so it tied v2 on this 20-question set; this small evaluation does not establish that it is more robust to new injection attempts.
+
+### Router takeaway
+
+- Best by accuracy and input size: `classify_v2`, 20/20. It ties v3 and v4 on this test set with fewer input tokens.
+- What changed in v4: added one instruction to treat rule-changing or label-dictating text inside `<question>` as content. The score stayed at 20/20.
+- The best version still gets wrong: none of the 20 labelled questions. This is only the current test set, not a guarantee on new questions.
+- Labels changed after seeing results: none.
+- Average input tokens: v1 51; best (`classify_v2`) 244. The added 193 tokens per question bought 7 more correct answers out of 20 in this evaluation, so I consider the trade worthwhile for this set.
+
+### My contract (DocMeta)
+
+- Current contract fields: `doc_kind`, `year`, `language`, `summary`, `topics`, plus the product fields `food_code`, `food_name`, `food_group`, `energy_kcal`, `protein_g`, `iron_mg`, `fibre_g`, and `per_100g`.
+- Fields removed from the original project card: not recorded; I could not find a before-and-after card to verify which were deleted or why.
+- Tightened field: `year` is nullable but must be an integer from 1950 through 2027. The current contract also bounds summary length, topic count, and list item lengths/counts, and rejects unknown keys.
+
+### Extraction run
+
+- Prompt: `extract_v1`. The historical corpus notes record 10 parsed documents, but the current pending count could not be read.
+- Results: 0 ok, 0 repaired, 0 failed (0 processed out of the 10 documents recorded as parsed in the earlier corpus run; the current database's pending count could not be queried). The run stopped before extraction because the configured PostgreSQL connection closed while querying pending documents. The local Docker database was unavailable because the Docker daemon was not running.
+- Not finished: all currently pending documents remain to be checked; the exact number is unknown until the database is reachable.
+- Most common extraction failure reason: none observed. The blocker was database connectivity, before any model response or validation attempt.
+- Valid but wrong record: none reviewed; no extraction records were produced in this run.
+- Cost at list price: Rs 0.00 total; per-document cost is not measurable because 0 documents were processed.
+
+### One thing that went wrong today, and how I fixed it
+
+The metadata run could not query the configured database: PostgreSQL closed the connection, and the local Docker daemon was unavailable. No extraction calls ran, so no metadata was written and no model cost was incurred. Next step is to restore database access (or start the local Compose database), then rerun `uv run python scripts/extract_metadata.py`; the script resumes from documents not yet handled by `extract_v1`.

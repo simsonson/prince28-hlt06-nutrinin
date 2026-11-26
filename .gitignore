@@ -31,3 +31,4 @@ htmlcov/
 source/*.pdf
 
 data/manifest.jsonl.backup
+eval/cache/
