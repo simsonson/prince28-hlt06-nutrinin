@@ -1,9 +1,15 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from nutrinin.api.deps import check_db, get_repo
+from nutrinin.api.deps import (
+    check_db,
+    get_gateway,
+    get_repo,
+    get_usage_repo,
+)
 from nutrinin.api.main import create_app
 from nutrinin.config import Settings
+from nutrinin.llm.gateway import FakeLLM, LLMGateway
 
 # Tiny fake records: unit tests never touch a real database or your data file.
 SAMPLE = [
@@ -55,6 +61,9 @@ class FakeRepo:
 
     def __init__(self, rows):
         self.rows = rows
+        self.pages = {
+            ("001", 2): {"page_no": 2, "text": "Review after two days.", "headings": ["Fever"]}
+        }
 
     async def list(self, *, q, filters, food_code, sort, limit, offset):
         rows = [
@@ -75,6 +84,9 @@ class FakeRepo:
     async def get(self, external_id):
         return next((r for r in self.rows if r["id"] == external_id), None)
 
+    async def get_page(self, external_id, page_no):
+        return self.pages.get((external_id, page_no))
+
     async def count_records(self):
         return len(self.rows)
 
@@ -84,6 +96,23 @@ class FakeRepo:
             doc_type = row.get("doc_type", "record")
             counts[doc_type] = counts.get(doc_type, 0) + 1
         return counts
+
+
+class FakeUsageRepo:
+    """Returns predictable usage data without connecting to PostgreSQL."""
+
+    async def by_day(self, days: int = 7) -> list[dict]:
+        return [
+            {
+                "day": "2026-11-26",
+                "calls": 3,
+                "errors": 0,
+                "fallbacks": 0,
+                "tokens_in": 300,
+                "tokens_out": 120,
+                "cost_inr": 0.0642,
+            }
+        ]
 
 
 @pytest.fixture
@@ -98,9 +127,26 @@ def db_state():
 
 
 @pytest.fixture
-def client(settings, db_state):
+def llm():
+    """A scripted fake model; no API calls or external network."""
+    return FakeLLM()
+
+
+@pytest.fixture
+def usage_repo():
+    """Fake usage repository; no PostgreSQL connection."""
+    return FakeUsageRepo()
+
+
+@pytest.fixture
+def client(settings, db_state, llm, usage_repo):
     app = create_app(settings)
+
     app.dependency_overrides[get_repo] = lambda: FakeRepo(SAMPLE)
     app.dependency_overrides[check_db] = lambda: db_state["up"]
+
+    app.dependency_overrides[get_gateway] = lambda: LLMGateway([llm])
+    app.dependency_overrides[get_usage_repo] = lambda: usage_repo
+
     with TestClient(app) as c:
         yield c

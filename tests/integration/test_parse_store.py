@@ -44,6 +44,7 @@ async def test_a_parsed_document_is_saved_with_pages_and_heading_paths(session):
     doc = await session.scalar(select(Document))
     assert doc.external_id == document_id(RECORD["sha256"]) and doc.doc_type == "pdf"
     assert doc.title == "Fever Guidelines" and doc.metadata_["pages"] == 2
+    assert doc.metadata_["scanned_pages"] == []
     pages = (await session.scalars(select(Page).order_by(Page.page_no))).all()
     assert [p.page_no for p in pages] == [1, 2]
     assert pages[1].headings == ["Fever Guidelines", "Dengue"]
