@@ -35,6 +35,7 @@ class ParsedDoc:
     kind: str  # pdf, html, text or data
     title: str
     pages: list[ParsedPage]
+    scanned_pages: list[int] = field(default_factory=list)
 
 
 class ParseError(Exception):
@@ -114,14 +115,26 @@ def with_heading_paths(texts: list[str]) -> list[ParsedPage]:
     return pages
 
 
-def finish(parser: str, kind: str, title: str, texts: list[str]) -> ParsedDoc:
+def finish(
+    parser: str,
+    kind: str,
+    title: str,
+    texts: list[str],
+    scanned_pages: list[int] | None = None,
+) -> ParsedDoc:
     texts = drop_repeated_lines([clean_text(t) for t in texts])
     texts = [clean_text(t) for t in texts]
     if not any(texts):
         raise ParseError("empty", "no text after cleaning")
     found, _ = headings_in("\n".join(texts))
     # A document's own first heading beats file metadata like "Microsoft Word - final2.docx"
-    return ParsedDoc(parser, kind, found[0][1] if found else title, with_heading_paths(texts))
+    return ParsedDoc(
+        parser,
+        kind,
+        found[0][1] if found else title,
+        with_heading_paths(texts),
+        scanned_pages or [],
+    )
 
 
 # ---------- PDF, parser 1: PyMuPDF (fast, sees font sizes and tables) ----------
@@ -163,12 +176,13 @@ def _open_pdf(path: Path) -> pymupdf.Document:
 def parse_pdf_pymupdf(path: Path) -> ParsedDoc:
     doc = _open_pdf(path)
     body = _body_size(doc)
-    texts, chars = [], 0
+    texts, page_chars = [], []
     for page in doc:
         # Looking for tables is slow, so only do it on pages that have ruled lines at all.
         tables = list(page.find_tables().tables) if len(page.get_cdrawings()) >= 4 else []
         used: set[int] = set()
         out: list[str] = []
+        chars = 0
         for block in page.get_text("dict")["blocks"]:
             if block["type"] != 0:
                 continue  # an image
@@ -190,9 +204,20 @@ def parse_pdf_pymupdf(path: Path) -> ParsedDoc:
                 chars += len(text)
             out.append("")  # blank line between blocks
         texts.append("\n".join(out))
-    if chars < MIN_CHARS_PER_PAGE * len(texts):
-        raise ParseError("no_text_layer", f"{chars} characters on {len(texts)} pages: needs OCR")
-    return finish("pymupdf", "pdf", (doc.metadata or {}).get("title") or "", texts)
+        page_chars.append(chars)
+    scanned_pages = [
+        page_no for page_no, chars in enumerate(page_chars, start=1) if chars < MIN_CHARS_PER_PAGE
+    ]
+    if len(scanned_pages) == len(page_chars):
+        total = sum(page_chars)
+        raise ParseError("no_text_layer", f"{total} characters on {len(texts)} pages: needs OCR")
+    return finish(
+        "pymupdf",
+        "pdf",
+        (doc.metadata or {}).get("title") or "",
+        texts,
+        scanned_pages,
+    )
 
 
 def parse_pdf_ocr(path: Path, language: str = "eng") -> ParsedDoc:
@@ -221,9 +246,13 @@ def parse_pdf_pypdf(path: Path) -> ParsedDoc:
         raise ParseError("corrupt", str(exc)) from exc
     if not texts:
         raise ParseError("empty", "the PDF has no pages")
-    if sum(len(t) for t in texts) < MIN_CHARS_PER_PAGE * len(texts):
+    page_chars = [len(text) for text in texts]
+    scanned_pages = [
+        page_no for page_no, chars in enumerate(page_chars, start=1) if chars < MIN_CHARS_PER_PAGE
+    ]
+    if len(scanned_pages) == len(page_chars):
         raise ParseError("no_text_layer", f"almost no text on {len(texts)} pages: needs OCR")
-    return finish("pypdf", "pdf", "", texts)
+    return finish("pypdf", "pdf", "", texts, scanned_pages)
 
 
 # ---------- HTML ----------

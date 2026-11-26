@@ -119,6 +119,19 @@ def test_missing_document_is_problem_details(client):
     assert r.json()["request_id"] == r.headers["X-Request-ID"]
 
 
+def test_get_document_page_found(client):
+    r = client.get("/v1/documents/001/pages", params={"page_no": 2})
+    assert r.status_code == 200
+    assert r.json() == {"page_no": 2, "text": "Review after two days.", "headings": ["Fever"]}
+
+
+def test_missing_document_page_is_problem_details(client):
+    r = client.get("/v1/documents/001/pages", params={"page_no": 9})
+    assert r.status_code == 404
+    assert r.headers["content-type"] == "application/problem+json"
+    assert r.json()["request_id"] == r.headers["X-Request-ID"]
+
+
 def test_bad_limit_is_422_problem(client):
     r = client.get("/v1/documents", params={"limit": 0})
     assert r.status_code == 422

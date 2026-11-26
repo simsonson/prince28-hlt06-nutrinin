@@ -44,6 +44,12 @@ class DocumentStats(BaseModel):
     by_doc_type: dict[str, int]
 
 
+class DocumentPage(BaseModel):
+    page_no: int
+    text: str
+    headings: list[str]
+
+
 RESERVED = {"q", "limit", "offset", "food_code", "sort"}
 
 
@@ -90,3 +96,13 @@ async def get_document(doc_id: str, repo: RepoDep) -> dict:
     if record is None:
         raise HTTPException(status_code=404, detail=f"No document with id '{doc_id}'.")
     return record
+
+
+@router.get("/{doc_id}/pages", response_model=DocumentPage)
+async def get_document_page(
+    doc_id: str, repo: RepoDep, page_no: Annotated[int, Query(ge=1)]
+) -> dict:
+    page = await repo.get_page(doc_id, page_no)
+    if page is None:
+        raise HTTPException(status_code=404, detail=f"No page {page_no} for document '{doc_id}'.")
+    return page

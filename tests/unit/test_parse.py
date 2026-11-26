@@ -85,6 +85,13 @@ def test_a_scanned_pdf_is_a_recorded_failure_not_a_crash(tmp_path):
     assert error.value.reason == "no_text_layer"
 
 
+def test_scanned_pages_are_detected_individually(tmp_path):
+    pdf = make_pdf(tmp_path / "mixed.pdf", [body_page(), body_page(), []])
+    parsed = parse_file(pdf)
+    assert parsed.scanned_pages == [3]
+    assert [page.page_no for page in parsed.pages] == [1, 2, 3]
+
+
 def test_a_broken_file_is_reported_as_corrupt(tmp_path):
     bad = tmp_path / "broken.pdf"
     bad.write_bytes(b"%PDF-1.7 this is not really a pdf")
