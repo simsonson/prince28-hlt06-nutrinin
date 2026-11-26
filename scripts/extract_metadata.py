@@ -4,6 +4,7 @@
   uv run python scripts/extract_metadata.py               everything that is not done yet
   uv run python scripts/extract_metadata.py --retry-failed
   uv run python scripts/extract_metadata.py --schema      let the provider enforce the schema
+  uv run python scripts/extract_metadata.py --prompt-version extract_v1
 
 Safe to stop and run again: a document is skipped once the newest prompts/extract_v*.md has
 handled it. A new prompt version means every document is extracted again.
@@ -25,7 +26,7 @@ from nutrinin.llm.prompts import latest, read_prompt
 
 async def main_async(args: argparse.Namespace) -> int:
     settings = get_settings()
-    version = latest(settings.prompts_dir, "extract")
+    version = args.prompt_version or latest(settings.prompts_dir, "extract")
     prompt = read_prompt(settings.prompts_dir, version)
     engine = make_engine(settings)
     sessionmaker = make_sessionmaker(engine)
@@ -66,6 +67,9 @@ def main() -> int:
     parser.add_argument("--rpm", type=float, default=12, help="documents per minute (default 12)")
     parser.add_argument("--chars", type=int, default=6000, help="characters read per document")
     parser.add_argument("--retry-failed", action="store_true", help="also retry failed documents")
+    parser.add_argument(
+        "--prompt-version", help="use a specific prompt version instead of the latest"
+    )
     parser.add_argument(
         "--schema", action="store_true", help="send the JSON schema to the provider"
     )

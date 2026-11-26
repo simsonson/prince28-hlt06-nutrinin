@@ -56,5 +56,5 @@ The complete list, with a sha256 fingerprint of every file, is `data/manifest.js
 - The downloader checks robots.txt before downloads. No URL was marked robots-blocked, but the manifest does not preserve robots.txt rules; save an audit note next time.
 - Two DGI URLs appear to be alternate copies. They are not byte-identical, but compare their extracted content before indexing both.
 
-Parsing coverage: 100% of files
-Parsing coverage: 100% of pages
+Parsing coverage: 100% of files (10 parsed / 10 parsed+failed)
+Parsing coverage: 100% of pages (1,616 parsed / 1,616 parsed+failed)
