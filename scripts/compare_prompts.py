@@ -62,6 +62,20 @@ def write_table(rows: list[dict], total: int) -> None:
     NOTES.write_text(text, encoding="utf-8")
 
 
+def print_confusion(version: str, results: list[dict]) -> None:
+    """Print counts with the true label on rows and the model's label on columns."""
+    predicted = [*LABELS, "invalid"]
+    print(f"\n{version} confusion (true label to predicted label):")
+    print("| true \\ predicted | " + " | ".join(predicted) + " |")
+    print("|---|" + "---|" * len(predicted))
+    for actual in LABELS:
+        counts = [
+            sum(row["label"] == actual and row["got"] == label for row in results)
+            for label in predicted
+        ]
+        print(f"| {actual} | " + " | ".join(map(str, counts)) + " |")
+
+
 async def run(args: argparse.Namespace) -> int:
     settings = get_settings()
     examples, todo = load_testset()
@@ -102,6 +116,7 @@ async def run(args: argparse.Namespace) -> int:
                     f"{version} missed line {miss['n']}: wanted {miss['label']}, "
                     f"got {miss['got']} (reply {miss['reply'][:40]!r}) {miss['question'][:60]!r}"
                 )
+            print_confusion(version, results)
             rows.append(
                 {
                     "version": version,

@@ -27,9 +27,9 @@ def model_saying(*replies: str) -> tuple[FakeLLM, LLMGateway]:
     return llm, LLMGateway([llm])
 
 
-async def ask(gateway: LLMGateway, **options):
+async def ask(gateway: LLMGateway, text: str = "New fees 2024.", **options):
     return await extract(
-        gateway, Notice, "Fill the record.", "extract_v1", "Fee circular", "New fees.", **options
+        gateway, Notice, "Fill the record.", "extract_v1", "Fee circular", text, **options
     )
 
 
@@ -53,7 +53,7 @@ async def test_a_valid_reply_is_accepted_at_once():
     assert out.attempts == 1 and out.errors == []
     system, user = llm.seen[0]["messages"]
     assert "Fill the record." in system["content"] and '"year"' in system["content"]  # the schema
-    assert user["content"] == "Title: Fee circular\n<document>\nNew fees.\n</document>"
+    assert user["content"] == "Title: Fee circular\n<document>\nNew fees 2024.\n</document>"
 
 
 async def test_a_rejected_reply_goes_back_with_the_reason_and_gets_repaired():
@@ -65,6 +65,14 @@ async def test_a_rejected_reply_goes_back_with_the_reason_and_gets_repaired():
     assert rejected["role"] == "assistant" and "3024" in rejected["content"]
     assert "rejected" in repair["content"] and "2027" in repair["content"]
     assert out.tokens_in == 24  # both calls are paid for: 12 + 12
+
+
+async def test_a_valid_but_unsupported_year_is_rejected():
+    llm, gateway = model_saying(GOOD)
+    out = await ask(gateway, text="New fees.", max_attempts=1)
+    assert out.record is None and out.attempts == 1
+    assert out.errors == ["year 2024 is not in the document"]
+    assert llm.calls == 1
 
 
 async def test_after_three_bad_replies_there_is_no_record():

@@ -398,6 +398,14 @@ Store raw NIN/ICMR PDFs for NutriNIN ingestion workers.
 
 `uv run` first failed because the default uv cache under the user profile was inaccessible (`Access is denied`). I reran with `UV_CACHE_DIR=D:\NutriNIN\.uv-cache`, inside the workspace; the comparison completed and updated this section.
 
+### OCR and page coverage
+
+- Installed Tesseract OCR 5.4.0 on this Windows laptop. Both `eng` and `tam` language data are available.
+- Ran `uv run python scripts/parse_corpus.py --retry-failed --ocr eng`; it completed with 10 already-parsed files and no failed files to retry, so OCR was not invoked on corpus files during this run.
+- The parser already flags low-text PDF pages individually in `ParsedDoc.scanned_pages`, stores that list in document metadata, and the page endpoint returns page text/headings. Its existing mixed-PDF test has two text pages and one blank page; the page API has found/missing fake-repository tests, including problem-details 404.
+- Queried PostgreSQL coverage: 10 parsed files, 0 failed files; 1,616 parsed pages, 0 failed pages. Coverage is 100% of files and 100% of pages; the file and page counts are now shown in `DATASET.md`.
+- Focused verification: `uv run pytest tests/unit/test_api.py tests/unit/test_parse.py` → 42 passed.
+
 
 ### D08 · LLM gateway
 
@@ -434,6 +442,39 @@ Store raw NIN/ICMR PDFs for NutriNIN ingestion workers.
 ### One thing that went wrong today, and how I fixed it
 
 The first local gateway measurement returned `ConnectError` because the API process did not have network access in the sandbox. I restarted the local API with network access and reran the measurement successfully. The live deployment still needs a `/v1/chat` route before its latency can be measured.
+
+
+### Successful-call latency
+
+Query over all successful rows in `llm_calls` (no date filter), run 2026-11-26:
+
+```sql
+SELECT percentile_cont(0.50) WITHIN GROUP (ORDER BY latency_ms) AS p50_ms,
+       percentile_cont(0.95) WITHIN GROUP (ORDER BY latency_ms) AS p95_ms
+FROM llm_calls
+WHERE status = 'ok';
+```
+
+- Samples: 116 successful calls.
+- p50: 1,968.5 ms (1.97 s).
+- p95: 10,210.75 ms (10.21 s). Day 1 target was under 6 s, so p95 missed by about 4.21 s.
+
+### Provider status and breaker experiment
+
+- Added `GET /v1/llm/status`; it reports each configured provider's name, model, and `gateway.breakers[name].state`.
+- The API test observed `closed` for both fake providers, sent three consecutive primary failures (the gateway's default threshold) and saw `open`, advanced the fake clock through the 30-second cooldown and saw `half-open`, then let the next primary request succeed and saw `closed` again. This is the controlled Milestone 5 sequence through the FastAPI test client.
+
+### Local Ollama comparison
+
+- Ollama was already installed. `ollama list` showed `qwen2.5:1.5b`; the local API was available. The fallback in my local `.env` now points to `http://localhost:11434/v1`, model `qwen2.5:1.5b`, with `GROQ_API_KEY=ollama` to enable the OpenAI-compatible provider.
+- Same question: “What daily protein requirement do ICMR-NIN 2020 give for an adult man doing moderate activity? Answer briefly.”
+- Gemini (`gemini-3.5-flash-lite`): first words 3.26 s, total 3.30 s, 198 input / 97 output tokens. It answered 54 g/day.
+- Local Ollama (`qwen2.5:1.5b`): first words 0.59 s, total 1.00 s, 201 input / 52 output tokens. It answered 70–80 g/day, which is wrong for the ICMR-NIN 2020 reference adult man (54 g/day). Speed improved, but this answer did not meet the quality bar.
+
+### Short chat history
+
+- `ChatRequest` now accepts optional `history` with up to six earlier `user`/`assistant` messages. The API inserts them after the system prompt and before the new user message.
+- Unit tests check ordering and the six-message limit. On the same Ollama-backed API, the first question used 181 input tokens; the follow-up “And for children?” with the prior user and assistant messages used 244 input tokens (+63). The test app used a dummy database URL, so the answers returned but their usage rows were not persisted.
 
 ## D09 · Prompt versions compared
 
@@ -478,3 +519,22 @@ The first local gateway measurement returned `ConnectError` because the API proc
 ### One thing that went wrong today, and how I fixed it
 
 The metadata run could not query the configured database: PostgreSQL closed the connection, and the local Docker daemon was unavailable. No extraction calls ran, so no metadata was written and no model cost was incurred. Next step is to restore database access (or start the local Compose database), then rerun `uv run python scripts/extract_metadata.py`; the script resumes from documents not yet handled by `extract_v1`.
+
+### Provider-enforced extraction
+
+- Added `extract_v2`, which explicitly says not to infer a year and uses the contract schema passed as `response_format` with `--schema`.
+- Default-mode baseline (`extract_v1 --limit 20`): 10 documents were pending, 10 ok, 0 repaired, 0 failed; Rs 0.6774 at listed model prices.
+- Schema mode (`extract_v2 --limit 20 --schema`): same 10 documents, 10 ok, 0 repaired, 0 failed; Rs 0.7095. The 10 calls were Gemini `gemini-3.5-flash-lite`; no schema-related 400 occurred.
+- The limit was 20, but only 10 parsed documents were pending in the database.
+
+### Route before answering
+
+- `/v1/chat` now classifies with the measured best trade-off prompt `classify_v2`. `personal` returns “I can't know that from my documents.”; `off_topic` returns “That question is outside NutriNIN's subject.” without a second model call.
+- Asked question 6 through the API: “What will vegetable prices be at Koyambedu market tomorrow?” The router classified it as `personal` and returned “I can't know that from my documents.” after one Gemini call.
+- Two FakeLLM tests check the personal and off-topic fixed replies and confirm only the classifier call ran.
+
+### False-year validation and confusion counts
+
+- `extract()` now rejects a non-null year absent from the extracted document text with `year <value> is not in the document`; a unit test checks the valid-shaped-but-unsupported year case.
+- `compare_prompts.py` now prints a true-label-by-predicted-label table for every prompt version. On the cached 20-question set, v1 sent 1 docs question to personal, 2 docs questions to off_topic, 1 personal question to off_topic, and 3 off_topic questions to docs. Versions v2–v4 classified all 20 correctly.
+- Focused unit tests: 23 passed.
