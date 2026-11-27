@@ -46,6 +46,12 @@ async def dead_letter(repo: IngestRepoDep, limit: Annotated[int, Query(ge=1, le=
     return {"count": len(items), "items": items}
 
 
+@router.get("/stats")
+async def stats(repo: IngestRepoDep) -> dict:
+    """Queue health across all ingestion jobs."""
+    return await repo.stats()
+
+
 @router.get("/{job_id}")
 async def progress(job_id: str, repo: IngestRepoDep) -> dict:
     found = await repo.progress(job_id)

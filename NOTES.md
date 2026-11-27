@@ -573,3 +573,9 @@ An initial metadata run could not query the configured database because PostgreS
 ### One thing that went wrong today, and how I fixed it
 
 Several PDFs took longer than the 60 s job timeout while parsing, so retries piled up. I killed and restarted the worker; it requeued the 14 unfinished items from Postgres in Redis, confirming recovery, but the repeated parser timeouts remained and I stopped the worker to avoid another retry loop. The local job is incomplete and needs a parser/timeout fix before it can pass the 20-item completion check.
+
+### Queue follow-up
+
+- Two workers share the same Redis queue: ARQ's unique job IDs and the `→ ingest:<item>:ingest_document` / `← ingest:<item>` lines in each worker log show each item is claimed and completed by one worker only. Throughput is not guaranteed to double because both workers share the model provider's rate limit; two local 12-RPM pacers can hit that shared ceiling and receive throttling.
+- While work is active, Redis exposes `arq:queue`, one `arq:job:ingest:<item>` per unfinished item, and `arq:in-progress:ingest:<item>` for active jobs. The in-progress key TTL is the worker lock countdown (about the job timeout).
+- Added `GET /v1/ingest/stats`, returning counts for every item status and `oldest_queued_seconds`; two fake-repository tests cover a non-empty queue and an empty queue. Focused ingestion API tests: 11 passed; full unit suite: 135 passed.
