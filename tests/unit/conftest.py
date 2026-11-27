@@ -4,6 +4,9 @@ from fastapi.testclient import TestClient
 from nutrinin.api.deps import (
     check_db,
     get_gateway,
+    get_ingest_repo,
+    get_manifest,
+    get_queue,
     get_repo,
     get_usage_repo,
 )
@@ -118,7 +121,12 @@ class FakeUsageRepo:
 @pytest.fixture
 def settings():
     # _env_file=None: ignore your local .env so tests behave the same everywhere
-    return Settings(app_env="ci", database_url="postgresql://localhost:5432/unused", _env_file=None)
+    return Settings(
+        app_env="ci",
+        database_url="postgresql://localhost:5432/unused",
+        admin_token="test-token",
+        _env_file=None,
+    )
 
 
 @pytest.fixture
@@ -139,7 +147,43 @@ def usage_repo():
 
 
 @pytest.fixture
-def client(settings, db_state, llm, usage_repo):
+def queue():
+    class FakeQueue:
+        def __init__(self):
+            self.items = []
+
+        async def put(self, item_ids):
+            self.items += item_ids
+            return len(item_ids)
+
+    return FakeQueue()
+
+
+@pytest.fixture
+def ingest_repo():
+    from tests.conftest import FakeIngestRepo
+
+    return FakeIngestRepo()
+
+
+@pytest.fixture
+def manifest():
+    def record(n: int, **changes):
+        return {
+            "url": f"https://x.test/{n}.pdf",
+            "source": "x",
+            "licence": "CC BY 4.0",
+            "path": f"data/raw/x/{n}.pdf",
+            "sha256": str(n) * 64,
+            "status": "downloaded",
+            **changes,
+        }
+
+    return [record(1), record(2), record(3, sha256="a" * 64), record(4, status="failed")]
+
+
+@pytest.fixture
+def client(settings, db_state, llm, usage_repo, queue, ingest_repo, manifest):
     app = create_app(settings)
 
     app.dependency_overrides[get_repo] = lambda: FakeRepo(SAMPLE)
@@ -147,6 +191,9 @@ def client(settings, db_state, llm, usage_repo):
 
     app.dependency_overrides[get_gateway] = lambda: LLMGateway([llm])
     app.dependency_overrides[get_usage_repo] = lambda: usage_repo
+    app.dependency_overrides[get_queue] = lambda: queue
+    app.dependency_overrides[get_ingest_repo] = lambda: ingest_repo
+    app.dependency_overrides[get_manifest] = lambda: manifest
 
     with TestClient(app) as c:
         yield c
