@@ -1,80 +1,112 @@
-"""Queue an ingestion through your API and watch the worker do it.
+"""Write docs/INGEST_REPORT.md from what is really in the database.
 
-  uv run python scripts/ingest.py --limit 20            your laptop (http://localhost:8000)
-  uv run python scripts/ingest.py --limit 20 --url https://your-app.onrender.com
-  uv run python scripts/ingest.py --retry-failed        queue the dead-letter list again
-  uv run python scripts/ingest.py --watch JOB_ID        only watch a job that is running
+  uv run python scripts/ingest_report.py
 
-On a public URL the API wants the token: put ADMIN_TOKEN=... in .env (and in Render).
+Run it after an ingestion. The numbers between the markers are replaced on every run;
+whatever you write outside the markers is kept.
 """
 
-import argparse
-import sys
-import time
+import asyncio
+from datetime import datetime
+from pathlib import Path
 
-import httpx
+from sqlalchemy import text
 
 from nutrinin.config import get_settings
+from nutrinin.db.session import make_engine
+
+REPORT = Path("docs/INGEST_REPORT.md")
+START, END = "<!-- generated:start -->", "<!-- generated:end -->"
+
+QUERIES = {
+    "documents": "select count(*) from documents where doc_type <> 'record'",
+    "pages": "select count(*) from pages",
+    "characters": "select coalesce(sum(length(text)), 0) from pages",
+    "parse_failures": "select count(*) from parse_failures",
+    "extracted": "select count(*) from documents where metadata ? 'extract' "
+    "and not (metadata->'extract' ? 'error')",
+    "extract_failed": "select count(*) from documents where metadata->'extract' ? 'error'",
+    "jobs": "select count(*) from ingest_jobs",
+    "items_done": "select count(*) from ingest_items where status in ('done', 'skipped')",
+    "dead_letter": "select count(*) from ingest_items where status = 'failed'",
+    "retried": "select count(*) from ingest_items where attempts > 1",
+    "model_calls": "select count(*) from llm_calls where purpose = 'extract'",
+    "tokens_in": "select coalesce(sum(tokens_in), 0) from llm_calls where purpose = 'extract'",
+    "tokens_out": "select coalesce(sum(tokens_out), 0) from llm_calls where purpose = 'extract'",
+    "cost_inr": "select coalesce(sum(cost_inr), 0) from llm_calls where purpose = 'extract'",
+}
+LAST_JOB = """
+select j.id, j.requested, extract(epoch from max(i.updated_at) - j.created_at) as seconds,
+       count(*) filter (where i.status in ('done', 'skipped')) as ok,
+       count(*) filter (where i.status = 'failed') as failed
+from ingest_jobs j join ingest_items i on i.job_id = j.id
+where j.id = (select id from ingest_jobs order by created_at desc limit 1)
+group by j.id, j.requested, j.created_at
+"""
+REASONS = """
+select split_part(error, ':', 1) as stage, count(*) from ingest_items
+where status = 'failed' group by 1 order by 2 desc
+"""
 
 
-def show(progress: dict) -> str:
-    counts = progress["counts"]
-    parts = " ".join(f"{name}={counts[name]}" for name in counts)
-    return f"{progress['status']:<9} {parts} pages={progress['pages']} {progress['seconds']:.0f}s"
+async def collect() -> tuple[dict, object, list]:
+    engine = make_engine(get_settings())
+    async with engine.connect() as conn:
+        numbers = {name: (await conn.execute(text(sql))).scalar() for name, sql in QUERIES.items()}
+        last = (await conn.execute(text(LAST_JOB))).first()
+        reasons = (await conn.execute(text(REASONS))).all()
+    await engine.dispose()
+    return numbers, last, reasons
 
 
-def watch(client: httpx.Client, job_id: str, every: float) -> int:
-    last = ""
-    while True:
-        response = client.get(f"/v1/ingest/{job_id}")
-        if response.status_code != 200:
-            print(f"HTTP {response.status_code}: {response.text[:200]}")
-            return 1
-        progress = response.json()
-        line = show(progress)
-        if line.rsplit(" ", 1)[0] != last:  # print only when something changed
-            print(line, flush=True)
-            last = line.rsplit(" ", 1)[0]
-        if progress["status"] == "finished":
-            break
-        time.sleep(every)
-    for item in progress["dead_letter"]:
-        tries = "1 try" if item["attempts"] == 1 else f"{item['attempts']} tries"
-        print(f"FAILED   {item['path'] or item['url']}  ({tries})  {item['error']}")
-    return 0
+def render(n: dict, last, reasons: list) -> str:
+    lines = [
+        START,
+        f"_Generated {datetime.now().astimezone():%d %b %Y %H:%M} from the database._",
+        "",
+        "| What | Count |",
+        "|---|---|",
+        f"| Documents in the database | {n['documents']} |",
+        f"| Pages | {n['pages']} |",
+        f"| Tokens of text (characters ÷ 4) | {n['characters'] // 4:,} |",
+        f"| Files the parser gave up on | {n['parse_failures']} |",
+        f"| Documents with an extracted record | {n['extracted']} |",
+        f"| Documents whose extraction failed | {n['extract_failed']} |",
+        "",
+        "| Queue | Count |",
+        "|---|---|",
+        f"| Ingest jobs started | {n['jobs']} |",
+        f"| Items finished (done or skipped) | {n['items_done']} |",
+        f"| Items that needed more than one try | {n['retried']} |",
+        f"| Items in the dead-letter list | {n['dead_letter']} |",
+        "",
+        f"Model calls for extraction: {n['model_calls']} · tokens in {n['tokens_in']:,} · "
+        f"tokens out {n['tokens_out']:,} · cost at list price Rs {float(n['cost_inr']):.2f}",
+    ]
+    if last:
+        minutes = float(last.seconds or 0) / 60
+        lines += [
+            "",
+            f"Last job `{last.id}`: {last.requested} requested, {last.ok} ok, "
+            f"{last.failed} failed, {minutes:.1f} minutes.",
+        ]
+    if reasons:
+        lines += ["", "Dead-letter list by stage: " + ", ".join(f"{s} {c}" for s, c in reasons)]
+    return "\n".join([*lines, END])
 
 
 def main() -> int:
-    sys.stdout.reconfigure(errors="replace")
-    parser = argparse.ArgumentParser(
-        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
-    )
-    parser.add_argument("--url", default="http://localhost:8000", help="where your API runs")
-    parser.add_argument("--limit", type=int, default=20, help="queue at most N documents")
-    parser.add_argument("--source", default="", help="only this source from the manifest")
-    parser.add_argument("--retry-failed", action="store_true", help="queue failed items again")
-    parser.add_argument("--watch", metavar="JOB_ID", help="do not start anything, only watch")
-    parser.add_argument("--every", type=float, default=3.0, help="seconds between checks")
-    args = parser.parse_args()
-    headers = {"X-Admin-Token": get_settings().admin_token}
-    try:
-        with httpx.Client(base_url=args.url.rstrip("/"), headers=headers, timeout=90) as client:
-            if args.watch:
-                return watch(client, args.watch, args.every)
-            body = {"limit": args.limit, "source": args.source, "retry_failed": args.retry_failed}
-            response = client.post("/v1/ingest", json=body)
-            answer = response.json()
-            if response.status_code not in (200, 202):
-                print(f"HTTP {response.status_code}: {answer.get('detail', answer)}")
-                return 1
-            if not answer["job_id"]:
-                print(answer["detail"])
-                return 0
-            print(f"HTTP {response.status_code}: job {answer['job_id']}, {answer['queued']} queued")
-            return watch(client, answer["job_id"], args.every)
-    except httpx.TransportError as exc:
-        print(f"{type(exc).__name__}: is the API running at {args.url}?")
-        return 1
+    numbers, last, reasons = asyncio.run(collect())
+    block = render(numbers, last, reasons)
+    if REPORT.exists() and START in (old := REPORT.read_text(encoding="utf-8")) and END in old:
+        new = old[: old.index(START)] + block + old[old.index(END) + len(END) :]
+    else:
+        new = "# Ingestion report\n\n" + block + "\n\n## What I learnt\n\n(three lines, yours)\n"
+    REPORT.parent.mkdir(exist_ok=True)
+    REPORT.write_text(new, encoding="utf-8")
+    summary = f"documents={numbers['documents']} pages={numbers['pages']}"
+    print(f"{summary} dead_letter={numbers['dead_letter']} -> {REPORT}")
+    return 0
 
 
 if __name__ == "__main__":

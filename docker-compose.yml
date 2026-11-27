@@ -69,7 +69,10 @@ services:
   worker:
     build: .
     command: ["arq", "nutrinin.workers.main.WorkerSettings"]
-    environment: *app-env
+    environment:
+      <<: *app-env
+      INGEST_JOB_TIMEOUT: ${INGEST_JOB_TIMEOUT:-600}
+      INGEST_MAX_TRIES: ${INGEST_MAX_TRIES:-3}
     env_file: *keys
     volumes:
       - ./data/raw:/app/data/raw:ro

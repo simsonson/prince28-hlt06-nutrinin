@@ -65,6 +65,24 @@ class IngestRepository:
             "dead_letter": await self.dead_letter(job_id=job_id, limit=20),
         }
 
+    async def stats(self) -> dict:
+        """Aggregate item counts across every job and report the oldest queued age."""
+        rows = await self.session.execute(
+            select(IngestItem.status, func.count()).group_by(IngestItem.status)
+        )
+        counts = {"queued": 0, "running": 0, "done": 0, "skipped": 0, "failed": 0}
+        for status, count in rows:
+            counts[status] = count
+        oldest = await self.session.scalar(
+            select(func.min(IngestItem.updated_at)).where(IngestItem.status == "queued")
+        )
+        age = (
+            None
+            if oldest is None
+            else round(max(0.0, (datetime.now(UTC) - oldest).total_seconds()), 1)
+        )
+        return {"counts": counts, "oldest_queued_seconds": age}
+
     async def dead_letter(self, *, job_id: str | None = None, limit: int = 50) -> list[dict]:
         """Items that failed for good, newest first: the list a person has to look at."""
         stmt = select(IngestItem).where(IngestItem.status == "failed")

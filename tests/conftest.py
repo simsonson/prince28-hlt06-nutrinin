@@ -95,6 +95,10 @@ class FakeIngestRepo:
     def __init__(self):
         self.known = {"f-" + "a" * 20}  # one document is already in the database
         self.jobs: dict[str, list[dict]] = {}
+        self.stats_result = {
+            "counts": {"queued": 2, "running": 1, "done": 4, "skipped": 1, "failed": 1},
+            "oldest_queued_seconds": 42.5,
+        }
         self.failed = [
             {
                 "item": 7,
@@ -122,6 +126,9 @@ class FakeIngestRepo:
 
     async def dead_letter(self, *, job_id=None, limit=50):
         return self.failed[:limit]
+
+    async def stats(self):
+        return self.stats_result
 
     async def failed_records(self):
         return [{"url": item["url"], "path": item["path"]} for item in self.failed]

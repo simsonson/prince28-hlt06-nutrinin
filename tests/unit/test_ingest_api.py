@@ -79,6 +79,26 @@ def test_dead_letter_lists_what_failed_for_good(client):
     }
 
 
+def test_stats_reports_counts_and_oldest_queued_age(client):
+    r = client.get("/v1/ingest/stats")
+    assert r.status_code == 200
+    assert r.json() == {
+        "counts": {"queued": 2, "running": 1, "done": 4, "skipped": 1, "failed": 1},
+        "oldest_queued_seconds": 42.5,
+    }
+
+
+def test_stats_reports_no_age_when_queue_is_empty(client, ingest_repo):
+    ingest_repo.stats_result = {
+        "counts": {"queued": 0, "running": 0, "done": 4, "skipped": 1, "failed": 1},
+        "oldest_queued_seconds": None,
+    }
+    r = client.get("/v1/ingest/stats")
+    assert r.status_code == 200
+    assert r.json()["counts"]["queued"] == 0
+    assert r.json()["oldest_queued_seconds"] is None
+
+
 def test_when_redis_is_away_starting_is_a_503_and_the_rest_still_works(settings, ingest_repo):
     settings.redis_url = "redis://127.0.0.1:1"  # nothing listens there
     app = create_app(settings)
