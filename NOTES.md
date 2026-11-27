@@ -509,16 +509,16 @@ WHERE status = 'ok';
 
 ### Extraction run
 
-- Prompt: `extract_v1`. The historical corpus notes record 10 parsed documents, but the current pending count could not be read.
-- Results: 0 ok, 0 repaired, 0 failed (0 processed out of the 10 documents recorded as parsed in the earlier corpus run; the current database's pending count could not be queried). The run stopped before extraction because the configured PostgreSQL connection closed while querying pending documents. The local Docker database was unavailable because the Docker daemon was not running.
-- Not finished: all currently pending documents remain to be checked; the exact number is unknown until the database is reachable.
-- Most common extraction failure reason: none observed. The blocker was database connectivity, before any model response or validation attempt.
-- Valid but wrong record: none reviewed; no extraction records were produced in this run.
-- Cost at list price: Rs 0.00 total; per-document cost is not measurable because 0 documents were processed.
+- Prompt: `extract_v2` (latest extraction prompt).
+- Results: the earlier successful run recorded 10 documents processed, 10 ok, 0 repaired, 0 failed. I reran `scripts/extract_metadata.py` after the connection issue: `pending=0`, `ok=0`, `repaired=0`, `failed=0`, cost Rs 0.00. The database was reachable and no documents needed further work.
+- Not finished: none were pending for `extract_v2` at the verification run.
+- Most common extraction failure reason: none observed in the successful extraction results.
+- Valid but wrong record: none reported; the run recorded 10 validated results.
+- Cost at list price: Rs 0.00 for the verification rerun; the earlier 10-document `extract_v2 --schema` run recorded Rs 0.7095.
 
 ### One thing that went wrong today, and how I fixed it
 
-The metadata run could not query the configured database: PostgreSQL closed the connection, and the local Docker daemon was unavailable. No extraction calls ran, so no metadata was written and no model cost was incurred. Next step is to restore database access (or start the local Compose database), then rerun `uv run python scripts/extract_metadata.py`; the script resumes from documents not yet handled by `extract_v1`.
+An initial metadata run could not query the configured database because PostgreSQL closed the connection. The configured `DATABASE_URL` targets Neon, so the correct recovery was to restore access to that endpoint and rerun the script; the approved retry connected successfully and found no `extract_v2` documents pending. The script's per-document commits make interrupted runs resumable.
 
 ### Provider-enforced extraction
 
@@ -538,3 +538,38 @@ The metadata run could not query the configured database: PostgreSQL closed the 
 - `extract()` now rejects a non-null year absent from the extracted document text with `year <value> is not in the document`; a unit test checks the valid-shaped-but-unsupported year case.
 - `compare_prompts.py` now prints a true-label-by-predicted-label table for every prompt version. On the cached 20-question set, v1 sent 1 docs question to personal, 2 docs questions to off_topic, 1 personal question to off_topic, and 3 off_topic questions to docs. Versions v2–v4 classified all 20 correctly.
 - Focused unit tests: 23 passed.
+
+
+### D10 · Queue and worker
+
+- First run: 20 documents queued; it did not finish. At 414.8 s (the kill checkpoint): done 1, skipped 0, failed 5, queued 9, running 5.
+- Pace: 69.1 s per terminal item at the checkpoint (414.8 s / 6 outcomes; incomplete-run throughput), `INGEST_RPM=12`, `INGEST_CONCURRENCY=2`.
+
+### Kill test
+
+- Queued: 20. At the kill: queued 9, running 5, done 1, failed 5 (skipped 0).
+- After the new worker, as of 1,054.2 s: done 1 + skipped 0 + failed 6 = 7; 13 remain open (2 queued, 11 running), so the 20-item completion check is not met.
+- Documents in the database: 21 total, 21 different ids (20 seeded sample records + 1 ingested PDF).
+- The interrupted items came back within 0.01 s of worker startup. Why that long: startup scans Postgres for queued/running item ids and re-enqueues them in Redis; restarting the worker took about a minute after the kill.
+- Why nothing was doubled (one sentence, in my own words): each file gets a deterministic id from its SHA-256, and the worker checks that id before inserting, so a retry finds the existing document.
+
+### Dead-letter list
+
+| Stage (parse / extract / download / gave up) | Items | What I did |
+|---|---|---|
+| parse (`no_text_layer`) | 6 | Left in the dead-letter list; these scans need OCR before retrying. |
+| parse timeout observed | 13 items were still open at the last snapshot (2 queued, 11 running); not all were yet classified | Stopped the worker after repeated 60 s job timeouts; parser/runtime needs follow-up. |
+
+### Live ingestion
+
+- NutriNIN on Render: 0 of 5 documents done, 0 failed; no job was queued because `POST /v1/ingest` returned 404 (the live deployment does not expose this route yet).
+- A request without the token gets status 404 on that route, so the deployed authentication behavior could not be checked; the route was not found before auth ran.
+
+### Week 2 against Monday's estimate
+
+- `docs/CAPACITY.md` said: 1,031 pages, 228,794 estimated tokens. `docs/INGEST_REPORT.md` says: 114 pages, 19,302 estimated tokens (partial local run).
+- The difference is 917 pages and 209,492 tokens; only one new PDF finished parsing, while 6 scans failed and 13 items were still open at the last snapshot.
+
+### One thing that went wrong today, and how I fixed it
+
+Several PDFs took longer than the 60 s job timeout while parsing, so retries piled up. I killed and restarted the worker; it requeued the 14 unfinished items from Postgres in Redis, confirming recovery, but the repeated parser timeouts remained and I stopped the worker to avoid another retry loop. The local job is incomplete and needs a parser/timeout fix before it can pass the 20-item completion check.
