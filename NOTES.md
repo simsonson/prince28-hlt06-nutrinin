@@ -579,3 +579,9 @@ Several PDFs took longer than the 60 s job timeout while parsing, so retries pil
 - Two workers share the same Redis queue: ARQ's unique job IDs and the `→ ingest:<item>:ingest_document` / `← ingest:<item>` lines in each worker log show each item is claimed and completed by one worker only. Throughput is not guaranteed to double because both workers share the model provider's rate limit; two local 12-RPM pacers can hit that shared ceiling and receive throttling.
 - While work is active, Redis exposes `arq:queue`, one `arq:job:ingest:<item>` per unfinished item, and `arq:in-progress:ingest:<item>` for active jobs. The in-progress key TTL is the worker lock countdown (about the job timeout).
 - Added `GET /v1/ingest/stats`, returning counts for every item status and `oldest_queued_seconds`; two fake-repository tests cover a non-empty queue and an empty queue. Focused ingestion API tests: 11 passed; full unit suite: 135 passed.
+
+### D10 rerun — 27 Nov 2026
+
+- Rebuilt and restarted the API and worker so the queue changes were live. The current `/v1/ingest/stats` snapshot was `queued=111`, `running=27`, `done=10`, `skipped=3`, `failed=6`, with the oldest queued item at about 22,550 seconds; this is accumulated unfinished work, not a fresh 20-document benchmark.
+- The regenerated `docs/INGEST_REPORT.md` measured 2 non-record documents, 136 pages, 23,481 text tokens, 6 finished items, and 29 dead-letter items. The live worker was still processing when the report ran.
+- Local `/ready` returned ready with 30 records. Render `POST /v1/ingest` without a token returned 503 during this rerun, so no new five-document live-ingestion result was available.

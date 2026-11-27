@@ -91,3 +91,37 @@ Stop with `Ctrl+C`, then `docker compose down`. Add `-v` to also delete the data
 | Integration tests (needs `docker compose up`) | `make test-integration` | `uv run poe test-integration` |
 | Coverage report | `make cov` | `uv run poe cov` |
 | Lint and format check | `make lint` | `uv run poe lint` |
+
+## Queue and worker
+
+Redis-backed ingestion runs through the API and one or more workers. Start the local
+services, then run two workers in separate terminals when testing queue ownership:
+
+```powershell
+docker compose up -d db redis api
+uv run poe worker
+uv run poe worker
+uv run python scripts/ingest.py --limit 20
+```
+
+Each item has a deterministic ARQ job ID, so only one worker claims a given item even
+when both workers share the queue. Two workers can send up to 24 model calls per minute
+with the default 12-RPM pace each, but the provider's shared model quota can throttle
+that aggregate rate.
+
+To inspect a live queue:
+
+```powershell
+docker compose exec redis redis-cli
+keys *
+ttl arq:in-progress:ingest:<item-id>
+```
+
+Queue health is available without an admin token:
+
+```text
+GET /v1/ingest/stats
+{"counts":{"queued":0,"running":0,"done":0,"skipped":0,"failed":0},"oldest_queued_seconds":null}
+```
+
+`oldest_queued_seconds` increasing over time means workers are not keeping up.
