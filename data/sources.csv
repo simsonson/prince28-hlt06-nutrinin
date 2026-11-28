@@ -7,6 +7,22 @@
 # Terms on my project card: Public ICMR-NIN publications. Cite guideline and table numbers.
 # Do not download sources until permission is explicitly approved.
 url,source,licence,title,permission_status
+https://www.nin.res.in/ebooks/The_goodness_of_greens.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", The Goodness of Greens, approved
+https://www.nin.res.in/ebooks/Baby_care_study_for_Growth_%26_Development.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Baby Care Study for Growth & Development, approved
+https://www.nin.res.in/ebooks/Flipchart-II.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Flipchart II, approved
+https://www.nin.res.in/ebooks/Flipchart-III.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Flipchart III, approved
+https://www.nin.res.in/ebooks/Flipchart-IV.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Flipchart IV, approved
+https://nin.res.in/annualreports/Annual_Report_2023_24.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Annual Report 2023-24, approved
+https://nin.res.in/annualreports/Annual%20Report%202022-23%20270324.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Annual Report 2022-23, approved
+https://nin.res.in/annualreports/Annual%20Report%202021-22%20051023.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Annual Report 2021-22, approved
+https://nin.res.in/annualreports/Annual%20Report%202018-19.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Annual Report 2018-19, approved
+https://nin.res.in/annualreports/AR%2017-18_1.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 17-18, approved
+https://nin.res.in/annualreports/AR_Doc_16-17_Web.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 16-17, approved
+https://nin.res.in/annualreports/AR_2015-16.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 2015-16, approved
+https://nin.res.in/annualreports/AR_2015-16.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 2015-16, approved
+https://nin.res.in/annualreports/AR14-15%20for%20web.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 14-15, approved
+https://nin.res.in/annualreports/AR13-14%20for%20web.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 13-14, approved
+https://nin.res.in/annualreports/AR12-13_final.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 12-13, approved
 https://www.nin.res.in/ebooks/IFCT2017.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Indian Food Composition Tables 2017, approved
 https://nin.res.in/dietaryguidelines/pdfjs/locale/DGI_2024.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Dietary Guidelines for Indians 2024, approved
 https://www.nin.res.in/downloads/DietaryGuidelinesforNINwebsite.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Dietary Guidelines for Indians 2024 (NIN website), approved
@@ -18,6 +34,7 @@ https://www.nin.res.in/downloads/Report_Of_Urban_Population_75-80.pdf, nin, "ICM
 https://www.nin.res.in/downloads/Report_for_the_year_1977.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", National Nutrition Monitoring Bureau (NNMB) Report 1977, approved
 https://www.nin.res.in/downloads/Report_for_the_year_1979.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", National Nutrition Monitoring Bureau (NNMB) Report 1979, approved
 https://nin.res.in/annualreports/AR_Doc_16-17_Web.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Annual Report 2016-17, approved
+https://www.nin.res.in/downloads/NNMB_Third_Repeat_Rural_Survey%20%20%20Technicl_Report_26%20(1).pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", NNMB Third Repeat Rural Survey Technical Report 26, approved
 https://www.nin.res.in/ebooks/ABCD%20Chart%20latest.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", ABCD Chart latest, approved
 https://www.nin.res.in/ebooks/Adolescence.pdf, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Adolescence, approved
 https://www.nin.res.in/ebooks/Adolescent_Growth_Spurt.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Adolescent Growth Spurt, approved
@@ -37,19 +54,3 @@ https://www.nin.res.in/ebooks/Read_b4_u_eat_Eng.pdf?utm_source=chatgpt.com, nin,
 https://www.nin.res.in/ebooks/Read_b4_u_eat_hin.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Read Before You Eat (Hindi), approved
 https://www.nin.res.in/ebooks/snakes_ladders_of_Nutrition.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Snakes and Ladders of Nutrition, approved
 https://www.nin.res.in/ebooks/Tasty_Bites.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Tasty Bites, approved
-https://www.nin.res.in/ebooks/The_goodness_of_greens.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", The Goodness of Greens, approved
-https://www.nin.res.in/ebooks/Baby_care_study_for_Growth_%26_Development.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Baby Care Study for Growth & Development, approved
-https://www.nin.res.in/ebooks/Flipchart-II.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Flipchart II, approved
-https://www.nin.res.in/ebooks/Flipchart-III.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Flipchart III, approved
-https://www.nin.res.in/ebooks/Flipchart-IV.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Flipchart IV, approved
-https://nin.res.in/annualreports/Annual_Report_2023_24.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Annual Report 2023-24, approved
-https://nin.res.in/annualreports/Annual%20Report%202022-23%20270324.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Annual Report 2022-23, approved
-https://nin.res.in/annualreports/Annual%20Report%202021-22%20051023.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Annual Report 2021-22, approved
-https://nin.res.in/annualreports/Annual%20Report%202018-19.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", Annual Report 2018-19, approved
-https://nin.res.in/annualreports/AR%2017-18_1.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 17-18, approved
-https://nin.res.in/annualreports/AR_Doc_16-17_Web.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 16-17, approved
-https://nin.res.in/annualreports/AR_2015-16.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 2015-16, approved
-https://nin.res.in/annualreports/AR_2015-16.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 2015-16, approved
-https://nin.res.in/annualreports/AR14-15%20for%20web.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 14-15, approved
-https://nin.res.in/annualreports/AR13-14%20for%20web.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 13-14, approved
-https://nin.res.in/annualreports/AR12-13_final.pdf?utm_source=chatgpt.com, nin, "ICMR-NIN copyright; written permission required for product storage or reproduction", AR 12-13, approved
