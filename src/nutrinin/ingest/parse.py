@@ -329,7 +329,13 @@ def parse_file(path: Path, pdf_parser: str = "pymupdf") -> ParsedDoc:
                 if error.reason != "no_text_layer":
                     raise
                 language = "hin+eng" if "hindi" in path.name.lower() else "eng"
-                return parse_pdf_ocr(path, language=language)
+                try:
+                    return parse_pdf_ocr(path, language=language)
+                except ParseError as ocr_error:
+                    if ocr_error.reason not in {"ocr_unavailable", "empty"}:
+                        raise
+                    detail = f"{error.detail}; OCR unavailable: {ocr_error.detail}"
+                    raise ParseError("no_text_layer", detail) from ocr_error
         if suffix in {".html", ".htm"}:
             return parse_html(path)
         if suffix in TEXT_TYPES | DATA_TYPES:
