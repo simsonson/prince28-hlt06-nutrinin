@@ -6,6 +6,7 @@ because answers will cite "document, page, section".
 """
 
 import re
+import threading
 import unicodedata
 from collections import Counter
 from dataclasses import dataclass, field
@@ -19,6 +20,7 @@ TEXT_TYPES = {".md", ".mdx", ".markdown", ".txt", ".rst", ".adoc", ".sgml", ".py
 DATA_TYPES = {".json", ".yaml", ".yml", ".csv", ".xml"}
 PAGE_CHARS = 3000  # files without real pages are cut into "pages" of about this size
 MIN_CHARS_PER_PAGE = 50  # a PDF below this average has no text layer: it is a scan
+_OCR_LOCK = threading.Lock()  # Leptonica is not safe when two Tesseract calls overlap
 
 
 @dataclass
@@ -224,10 +226,11 @@ def parse_pdf_ocr(path: Path, language: str = "eng") -> ParsedDoc:
     """For scans: read the pixels with Tesseract, which must be installed. Seconds per page."""
     doc = _open_pdf(path)
     try:
-        texts = [
-            page.get_text(textpage=page.get_textpage_ocr(language=language, dpi=200, full=True))
-            for page in doc
-        ]
+        with _OCR_LOCK:
+            texts = [
+                page.get_text(textpage=page.get_textpage_ocr(language=language, dpi=200, full=True))
+                for page in doc
+            ]
     except Exception as exc:  # Tesseract or its language file is missing
         raise ParseError("ocr_unavailable", str(exc)) from exc
     return finish(f"ocr-{language}", "pdf", "", texts)
@@ -320,7 +323,19 @@ def parse_file(path: Path, pdf_parser: str = "pymupdf") -> ParsedDoc:
     suffix = path.suffix.lower()
     try:
         if suffix == ".pdf":
-            return PDF_PARSERS[pdf_parser](path)
+            try:
+                return PDF_PARSERS[pdf_parser](path)
+            except ParseError as error:
+                if error.reason != "no_text_layer":
+                    raise
+                language = "hin+eng" if "hindi" in path.name.lower() else "eng"
+                try:
+                    return parse_pdf_ocr(path, language=language)
+                except ParseError as ocr_error:
+                    if ocr_error.reason not in {"ocr_unavailable", "empty"}:
+                        raise
+                    detail = f"{error.detail}; OCR unavailable: {ocr_error.detail}"
+                    raise ParseError("no_text_layer", detail) from ocr_error
         if suffix in {".html", ".htm"}:
             return parse_html(path)
         if suffix in TEXT_TYPES | DATA_TYPES:

@@ -585,3 +585,10 @@ Several PDFs took longer than the 60 s job timeout while parsing, so retries pil
 - Rebuilt and restarted the API and worker so the queue changes were live. The current `/v1/ingest/stats` snapshot was `queued=111`, `running=27`, `done=10`, `skipped=3`, `failed=6`, with the oldest queued item at about 22,550 seconds; this is accumulated unfinished work, not a fresh 20-document benchmark.
 - The regenerated `docs/INGEST_REPORT.md` measured 2 non-record documents, 136 pages, 23,481 text tokens, 6 finished items, and 29 dead-letter items. The live worker was still processing when the report ran.
 - Local `/ready` returned ready with 30 records. Render `POST /v1/ingest` without a token returned 503 during this rerun, so no new five-document live-ingestion result was available.
+
+### D10 recovery fix — week-2
+
+- Increased the default `INGEST_JOB_TIMEOUT` from 60 to 600 seconds. The Compose worker already used 600 seconds; this also fixes local and embedded workers that use the application default.
+- Added an integration kill-recovery case for a 20-item batch: seven items finish, the worker is treated as killed with thirteen rows persisted as `running`, and the restarted worker processes them to terminal states. The pass condition is `done + skipped + failed = 20`, with `queued = running = 0`.
+- `scripts/ingest_report.py` now includes queued/running counts and reports how many items from the latest job remain open, making incomplete totals visible.
+- Rerun with `docker compose up -d --build`, then `uv run python scripts/ingest.py --limit 20 --every 3`; once it finishes, run `uv run python scripts/ingest_report.py`. The report and kill-test results should be refreshed against the live database before recording completion.

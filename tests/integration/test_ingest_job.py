@@ -151,3 +151,31 @@ async def test_a_document_that_keeps_killing_the_worker_is_given_up(world):
     assert await ingest_document(ctx, item_id) == "failed"
     assert "never finished" in (await world["item"](item_id)).error
     assert await world["count"](Document) == 0  # it was not touched a fourth time
+
+
+async def test_killed_batch_of_twenty_recovers_and_reaches_terminal_counts(world, tmp_path):
+    """A worker restart requeues persisted running rows; every row reaches a terminal state."""
+    world["ctx"]["extract"] = None  # exercise queue recovery without external model calls
+    records = []
+    for index in range(20):
+        path = tmp_path / f"batch-{index}.md"
+        path.write_text(f"# Notice {index}\n\nUnique content {index}.", encoding="utf-8")
+        records.append(world["record"](path.name))
+
+    job_id, item_ids = await world["queue"](*records)
+    # Simulate a kill after 7 items completed and 13 had started once.
+    for item_id in item_ids[7:]:
+        async with world["ctx"]["sessionmaker"]() as session:
+            item = await session.get(IngestItem, item_id)
+            item.status, item.attempts = "running", 1
+            await session.commit()
+
+    for item_id in item_ids:
+        await ingest_document(world["ctx"], item_id)
+
+    async with world["ctx"]["sessionmaker"]() as session:
+        progress = await IngestRepository(session).progress(job_id)
+    counts = progress["counts"]
+    assert progress["status"] == "finished"
+    assert counts["done"] + counts["skipped"] + counts["failed"] == 20
+    assert counts["queued"] == counts["running"] == 0
