@@ -32,3 +32,5 @@ source/*.pdf
 
 data/manifest.jsonl.backup
 eval/cache/
+
+nutrinin_before_dedup.dump

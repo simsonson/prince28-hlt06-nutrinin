@@ -29,6 +29,7 @@ QUERIES = {
     "jobs": "select count(*) from ingest_jobs",
     "items_done": "select count(*) from ingest_items where status in ('done', 'skipped')",
     "dead_letter": "select count(*) from ingest_items where status = 'failed'",
+    "open_items": "select count(*) from ingest_items where status in ('queued', 'running')",
     "retried": "select count(*) from ingest_items where attempts > 1",
     "model_calls": "select count(*) from llm_calls where purpose = 'extract'",
     "tokens_in": "select coalesce(sum(tokens_in), 0) from llm_calls where purpose = 'extract'",
@@ -38,7 +39,8 @@ QUERIES = {
 LAST_JOB = """
 select j.id, j.requested, extract(epoch from max(i.updated_at) - j.created_at) as seconds,
        count(*) filter (where i.status in ('done', 'skipped')) as ok,
-       count(*) filter (where i.status = 'failed') as failed
+       count(*) filter (where i.status = 'failed') as failed,
+       count(*) filter (where i.status in ('queued', 'running')) as open
 from ingest_jobs j join ingest_items i on i.job_id = j.id
 where j.id = (select id from ingest_jobs order by created_at desc limit 1)
 group by j.id, j.requested, j.created_at
@@ -79,6 +81,7 @@ def render(n: dict, last, reasons: list) -> str:
         f"| Items finished (done or skipped) | {n['items_done']} |",
         f"| Items that needed more than one try | {n['retried']} |",
         f"| Items in the dead-letter list | {n['dead_letter']} |",
+        f"| Items still open (queued or running) | {n['open_items']} |",
         "",
         f"Model calls for extraction: {n['model_calls']} · tokens in {n['tokens_in']:,} · "
         f"tokens out {n['tokens_out']:,} · cost at list price Rs {float(n['cost_inr']):.2f}",
@@ -88,7 +91,7 @@ def render(n: dict, last, reasons: list) -> str:
         lines += [
             "",
             f"Last job `{last.id}`: {last.requested} requested, {last.ok} ok, "
-            f"{last.failed} failed, {minutes:.1f} minutes.",
+            f"{last.failed} failed, {last.open} still open, {minutes:.1f} minutes.",
         ]
     if reasons:
         lines += ["", "Dead-letter list by stage: " + ", ".join(f"{s} {c}" for s, c in reasons)]

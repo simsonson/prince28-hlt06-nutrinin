@@ -42,7 +42,7 @@ class Settings(BaseSettings):
     worker_in_api: bool = False  # True where no separate worker service exists (free hosting)
     ingest_concurrency: int = 2  # documents a worker handles at the same time
     ingest_rpm: float = 12.0  # model calls per minute, shared by those documents
-    ingest_job_timeout: int = 60  # seconds; a longer job is stopped and tried again
+    ingest_job_timeout: int = 600  # seconds; PDFs may take several minutes to parse
     ingest_max_tries: int = 3
 
     @field_validator("database_url")

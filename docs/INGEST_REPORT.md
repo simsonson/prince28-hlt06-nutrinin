@@ -1,7 +1,7 @@
 # Ingestion report
 
 <!-- generated:start -->
-_Generated 27 Nov 2026 21:45 from the database._
+_Generated 28 Nov 2026 09:14 from the database._
 
 | What | Count |
 |---|---|
@@ -16,14 +16,15 @@ _Generated 27 Nov 2026 21:45 from the database._
 |---|---|
 | Ingest jobs started | 4 |
 | Items finished (done or skipped) | 6 |
-| Items that needed more than one try | 30 |
-| Items in the dead-letter list | 29 |
+| Items that needed more than one try | 32 |
+| Items in the dead-letter list | 33 |
+| Items still open (queued or running) | 1 |
 
 Model calls for extraction: 26 · tokens in 33,193 · tokens out 3,453 · cost at list price Rs 1.77
 
-Last job `99e5d82e22c24f719d2298098ce0a92d`: 5 requested, 0 ok, 0 failed, 3.4 minutes.
+Last job `99e5d82e22c24f719d2298098ce0a92d`: 5 requested, 0 ok, 4 failed, 1 still open, 24.1 minutes.
 
-Dead-letter list by stage: gave up 22, parse 7
+Dead-letter list by stage: gave up 26, parse 7
 <!-- generated:end -->
 
 ## What I learnt
